@@ -4,79 +4,89 @@ import "video.js/dist/video-js.css";
 
 export default function App() {
   const playerRef = useRef(null);
+
+  // Sidebar open/close state
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Default stream
   const [currentUrl, setCurrentUrl] = useState(
     "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
   );
 
+  // Sample playable HLS streams
   const channels = [
-    { name: "Big Buck Bunny", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-    { name: "Sintel", url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8" },
-    { name: "Tears of Steel", url: "https://bitdash-a.akamaihd.net/content/tears-of-steel/tears-of-steel.m3u8" }
+    {
+      name: "Big Buck Bunny",
+      url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    },
+    {
+      name: "Sintel",
+      url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
+    },
+    {
+      name: "Tears of Steel",
+      url: "https://bitdash-a.akamaihd.net/content/tears-of-steel/tears-of-steel.m3u8",
+    },
   ];
 
+  // Initialize Video.js player once
   useEffect(() => {
-    // initialize Video.js once
     const player = videojs(playerRef.current, {
       autoplay: false,
       controls: true,
       responsive: true,
-      fluid: true
+      fluid: true, // fills container
     });
 
-    // Update source when currentUrl changes
+    // Set initial source
     player.src({ src: currentUrl, type: "application/x-mpegURL" });
     player.play().catch(() => {});
 
     return () => {
       player.dispose();
     };
-  }, []); // initialize only once
+  }, []);
 
+  // Update source on channel change
   useEffect(() => {
     if (playerRef.current && currentUrl) {
       const player = videojs(playerRef.current);
       player.src({ src: currentUrl, type: "application/x-mpegURL" });
       player.play().catch(() => {});
     }
-  }, [currentUrl]); // update source on change
+  }, [currentUrl]);
 
   return (
     <div style={{ display: "flex", height: "100vh", margin: 0, padding: 0 }}>
+      {/* Sidebar */}
       <div
         style={{
-          width: "250px",
+          width: sidebarOpen ? "250px" : "0px",
           backgroundColor: "#1a1a1a",
           color: "#fff",
-          padding: "10px",
+          padding: sidebarOpen ? "10px" : "0px",
           boxSizing: "border-box",
-          overflowY: "auto"
+          overflowY: "auto",
+          transition: "0.3s",
         }}
       >
         <h2 style={{ textAlign: "center" }}>OlivePlayer</h2>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            width: "100%",
+            marginBottom: "10px",
+            padding: "5px",
+            cursor: "pointer",
+            backgroundColor: "#333",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+          }}
+        >
+          {sidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
+        </button>
         {channels.map((ch, idx) => (
           <div
             key={idx}
-            onClick={() => setCurrentUrl(ch.url)}
-            style={{
-              cursor: "pointer",
-              padding: "10px",
-              marginBottom: "10px",
-              backgroundColor: "#333",
-              borderRadius: "6px"
-            }}
-          >
-            {ch.name}
-          </div>
-        ))}
-      </div>
-      <div style={{ flex: 1, backgroundColor: "#000", display: "flex", justifyContent: "center", alignItems: "center" }}>
-        <video
-          ref={playerRef}
-          className="video-js vjs-big-play-centered"
-          controls
-          style={{ width: "90%", height: "90%", maxHeight: "90vh", maxWidth: "100%" }}
-        />
-      </div>
-    </div>
-  );
-}
+            onClick={() => setCurrentU
