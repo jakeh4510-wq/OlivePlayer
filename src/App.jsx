@@ -24,12 +24,14 @@ export default function OlivePlayer() {
   const [currentUrl, setCurrentUrl] = useState("");
   const [section, setSection] = useState("live"); // live, movies, tvshows
   const [groupedShows, setGroupedShows] = useState({});
+  const [selectedShow, setSelectedShow] = useState(null);
 
   // Fetch and parse playlist whenever section changes
   useEffect(() => {
     setChannels([]);
     setGroupedShows({});
     setCurrentUrl("");
+    setSelectedShow(null);
 
     const playlistUrl = PLAYLISTS[section];
     if (!playlistUrl) return;
@@ -43,15 +45,16 @@ export default function OlivePlayer() {
           .filter((item) => item.url)
           .map((item) => {
             const ext = item.url.split(".").pop().toLowerCase();
-            let type = ext === "m3u8" ? "application/x-mpegURL" : "video/mp4";
+            const type = ext === "m3u8" ? "application/x-mpegURL" : "video/mp4";
             return { name: item.name || "Unknown", url: item.url, type };
           });
 
         setChannels(parsedChannels);
+
         if (parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
 
-        // Only group TV shows and movies
-        if (section === "tvshows" || section === "movies") {
+        // Only group TV shows
+        if (section === "tvshows") {
           const groups = {};
           parsedChannels.forEach((ch) => {
             let showName = ch.name.split(/S\d+E\d+|Episode/i)[0].trim();
@@ -156,38 +159,39 @@ export default function OlivePlayer() {
                 </div>
               ))}
 
-            {(section === "tvshows" || section === "movies") &&
+            {section === "movies" &&
+              channels.map((ch, i) => (
+                <div
+                  key={i}
+                  onClick={() => setCurrentUrl(ch.url)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    backgroundColor: currentUrl === ch.url ? "#555" : "#333",
+                    borderRadius: "6px",
+                  }}
+                >
+                  {ch.name}
+                </div>
+              ))}
+
+            {section === "tvshows" &&
               Object.keys(groupedShows).map((show, idx) => (
-                <details key={idx}>
-                  <summary
-                    style={{
-                      cursor: "pointer",
-                      padding: "10px",
-                      marginBottom: "5px",
-                      backgroundColor: "#333",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    {show}
-                  </summary>
-                  <div style={{ paddingLeft: "10px" }}>
-                    {groupedShows[show].map((ep, i) => (
-                      <div
-                        key={i}
-                        onClick={() => setCurrentUrl(ep.url)}
-                        style={{
-                          cursor: "pointer",
-                          padding: "6px",
-                          marginBottom: "4px",
-                          backgroundColor: currentUrl === ep.url ? "#555" : "#222",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        {ep.name}
-                      </div>
-                    ))}
-                  </div>
-                </details>
+                <div
+                  key={idx}
+                  onClick={() => setSelectedShow(show)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    backgroundColor: selectedShow === show ? "#555" : "#333",
+                    borderRadius: "6px",
+                    width: "100%",
+                  }}
+                >
+                  {show}
+                </div>
               ))}
           </>
         )}
@@ -199,10 +203,12 @@ export default function OlivePlayer() {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
+          justifyContent: "flex-start",
           alignItems: "center",
+          paddingTop: "20px",
         }}
       >
+        {/* Top navigation */}
         <div style={{ marginBottom: "20px" }}>
           <button
             onClick={() => setSection("live")}
@@ -272,6 +278,38 @@ export default function OlivePlayer() {
           >
             Play
           </button>
+
+          {/* Episodes for selected show */}
+          {selectedShow && groupedShows[selectedShow] && (
+            <div
+              style={{
+                marginTop: "20px",
+                width: "100%",
+                textAlign: "left",
+                backgroundColor: "rgba(0,0,0,0.6)",
+                padding: "10px",
+                borderRadius: "8px",
+              }}
+            >
+              <h2 style={{ color: "#fff" }}>{selectedShow} Episodes</h2>
+              {groupedShows[selectedShow].map((ep, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setCurrentUrl(ep.url)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "6px",
+                    marginBottom: "4px",
+                    backgroundColor: currentUrl === ep.url ? "#555" : "#222",
+                    borderRadius: "4px",
+                    color: "#fff",
+                  }}
+                >
+                  {ep.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
