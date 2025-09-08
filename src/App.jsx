@@ -32,6 +32,7 @@ export default function OlivePlayer() {
   const [movies, setMovies] = useState([]);
   const [tvShowsGrouped, setTvShowsGrouped] = useState({});
   const [selectedTvShow, setSelectedTvShow] = useState(null);
+  const [seasonCollapse, setSeasonCollapse] = useState({}); // track collapse state per season
 
   const [currentLiveUrl, setCurrentLiveUrl] = useState("");
   const [currentMovieUrl, setCurrentMovieUrl] = useState("");
@@ -118,12 +119,12 @@ export default function OlivePlayer() {
       tvInstance.current = videojs(tvPlayerRef.current, { controls: true, fluid: true });
   }, []);
 
-  // Update player sources and autoplay
+  // Update player sources
   useEffect(() => {
     if (liveInstance.current && currentLiveUrl) {
       liveInstance.current.src({ src: currentLiveUrl });
       liveInstance.current.load();
-      liveInstance.current.play().catch((e) => console.log("Play blocked", e));
+      liveInstance.current.play().catch(() => {});
     }
   }, [currentLiveUrl]);
 
@@ -131,7 +132,7 @@ export default function OlivePlayer() {
     if (moviesInstance.current && currentMovieUrl) {
       moviesInstance.current.src({ src: currentMovieUrl });
       moviesInstance.current.load();
-      moviesInstance.current.play().catch((e) => console.log("Play blocked", e));
+      moviesInstance.current.play().catch(() => {});
     }
   }, [currentMovieUrl]);
 
@@ -139,7 +140,7 @@ export default function OlivePlayer() {
     if (tvInstance.current && currentTvUrl) {
       tvInstance.current.src({ src: currentTvUrl });
       tvInstance.current.load();
-      tvInstance.current.play().catch((e) => console.log("Play blocked", e));
+      tvInstance.current.play().catch(() => {});
     }
   }, [currentTvUrl]);
 
@@ -151,7 +152,7 @@ export default function OlivePlayer() {
     moviesInstance.current?.pause();
     tvInstance.current?.pause();
 
-    // Reset URLs for new section
+    // Reset URLs
     if (newSection === "live" && liveChannels.length) setCurrentLiveUrl(liveChannels[0].url);
     if (newSection === "movies" && movies.length) setCurrentMovieUrl(movies[0].url);
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
@@ -159,7 +160,16 @@ export default function OlivePlayer() {
       setSelectedTvShow(firstShow);
       const firstSeason = Object.keys(tvShowsGrouped[firstShow])[0];
       setCurrentTvUrl(tvShowsGrouped[firstShow][firstSeason][0].url);
+
+      // Initialize collapse states
+      const collapseStates = {};
+      Object.keys(tvShowsGrouped[firstShow]).forEach((season) => (collapseStates[season] = true));
+      setSeasonCollapse(collapseStates);
     }
+  };
+
+  const toggleSeason = (season) => {
+    setSeasonCollapse((prev) => ({ ...prev, [season]: !prev[season] }));
   };
 
   return (
@@ -244,6 +254,10 @@ export default function OlivePlayer() {
                     setSelectedTvShow(show);
                     const firstSeason = Object.keys(tvShowsGrouped[show])[0];
                     setCurrentTvUrl(tvShowsGrouped[show][firstSeason][0].url);
+
+                    const collapseStates = {};
+                    Object.keys(tvShowsGrouped[show]).forEach((season) => (collapseStates[season] = true));
+                    setSeasonCollapse(collapseStates);
                   }}
                   style={{
                     cursor: "pointer",
@@ -308,11 +322,11 @@ export default function OlivePlayer() {
           style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }}
         />
 
-        {/* Play buttons per section */}
+        {/* Play buttons */}
         <div style={{ marginTop: "10px" }}>
           {section === "live" && currentLiveUrl && (
             <button
-              onClick={() => liveInstance.current?.play().catch((e) => console.log("Play blocked", e))}
+              onClick={() => liveInstance.current?.play().catch(() => {})}
               style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
             >
               Play
@@ -320,7 +334,7 @@ export default function OlivePlayer() {
           )}
           {section === "movies" && currentMovieUrl && (
             <button
-              onClick={() => moviesInstance.current?.play().catch((e) => console.log("Play blocked", e))}
+              onClick={() => moviesInstance.current?.play().catch(() => {})}
               style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
             >
               Play
@@ -328,7 +342,7 @@ export default function OlivePlayer() {
           )}
           {section === "tvshows" && currentTvUrl && (
             <button
-              onClick={() => tvInstance.current?.play().catch((e) => console.log("Play blocked", e))}
+              onClick={() => tvInstance.current?.play().catch(() => {})}
               style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
             >
               Play
@@ -336,35 +350,52 @@ export default function OlivePlayer() {
           )}
         </div>
 
-        {/* TV Shows episodes */}
+        {/* TV Shows episodes with collapsible seasons */}
         {section === "tvshows" && selectedTvShow && (
-          <div style={{ marginTop: "20px", width: "95%", maxWidth: "1400px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: "8px", padding: "10px", maxHeight: "300px", overflowY: "auto" }}>
-            {Object.keys(tvShowsGrouped[selectedTvShow]).map((season, i) => (
-              <div key={i} style={{ marginBottom: "10px" }}>
-                <h3 style={{ color: "#fff" }}>{season}</h3>
-                {tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setCurrentTvUrl(ep.url)}
-                    style={{
-                      cursor: "pointer",
-                      padding: "6px",
-                      marginBottom: "4px",
-                      borderRadius: "4px",
-                      color: "#fff",
-                      backgroundColor: currentTvUrl === ep.url ? "#555" : "#222",
-                    }}
-                  >
-                    {ep.name}
-                  </div>
-                ))}
+          <div
+            style={{
+              marginTop: "20px",
+              width: "95%",
+              maxWidth: "1400px",
+              backgroundColor: "rgba(0,0,0,0.6)",
+              borderRadius: "8px",
+              padding: "10px",
+              maxHeight: "300px",
+              overflowY: "auto",
+            }}
+          >
+            {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
+              <div key={season} style={{ marginBottom: "10px" }}>
+                <h3
+                  style={{ color: "#fff", cursor: "pointer" }}
+                  onClick={() => toggleSeason(season)}
+                >
+                  {season} {seasonCollapse[season] ? "▼" : "▲"}
+                </h3>
+                {!seasonCollapse[season] &&
+                  tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setCurrentTvUrl(ep.url)}
+                      style={{
+                        cursor: "pointer",
+                        padding: "6px",
+                        marginBottom: "4px",
+                        borderRadius: "4px",
+                        color: "#fff",
+                        backgroundColor: currentTvUrl === ep.url ? "#555" : "#222",
+                      }}
+                    >
+                      {ep.name}
+                    </div>
+                  ))}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Sidebar toggle */}
+      {/* Sidebar toggle button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         style={{
