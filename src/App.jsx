@@ -8,12 +8,11 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Playlist sources
 const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
   tvshows:
     "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
-  movies: null, // placeholder until you have a link
+  movies: null,
 };
 
 export default function OlivePlayer() {
@@ -21,14 +20,15 @@ export default function OlivePlayer() {
   const playerInstance = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [channels, setChannels] = useState([]);
+  const [groupedShows, setGroupedShows] = useState({});
   const [currentUrl, setCurrentUrl] = useState("");
-  const [section, setSection] = useState("live"); // live, movies, tvshows
+  const [section, setSection] = useState("live");
 
-  // Fetch and parse M3U playlist
   useEffect(() => {
     const playlistUrl = PLAYLISTS[section];
     if (!playlistUrl) {
       setChannels([]);
+      setGroupedShows({});
       setCurrentUrl("");
       return;
     }
@@ -38,22 +38,43 @@ export default function OlivePlayer() {
       .then((text) => {
         const parsed = parse(text);
 
-        const parsedChannels = parsed.items
-          .filter((item) => item.url && item.url.endsWith(".m3u8"))
-          .map((item) => ({
-            name: item.name || "Unknown",
-            url: item.url,
-            type: "application/x-mpegURL",
-          }));
+        if (section === "tvshows") {
+          const shows = {};
+          parsed.items.forEach((item) => {
+            if (!item.url || !item.url.endsWith(".m3u8")) return;
 
-        setChannels(parsedChannels);
-        if (parsedChannels.length) {
-          setCurrentUrl(parsedChannels[0].url);
+            // Example name: "Invincible S01E01"
+            const match = item.name.match(/(.+?)\s*[Ss](\d+)[Ee](\d+)/);
+            if (match) {
+              const showName = match[1].trim();
+              const season = `Season ${parseInt(match[2], 10)}`;
+              const episode = `Episode ${parseInt(match[3], 10)}`;
+
+              if (!shows[showName]) shows[showName] = {};
+              if (!shows[showName][season]) shows[showName][season] = [];
+              shows[showName][season].push({
+                name: episode,
+                url: item.url,
+              });
+            }
+          });
+          setGroupedShows(shows);
+        } else {
+          const parsedChannels = parsed.items
+            .filter((item) => item.url && item.url.endsWith(".m3u8"))
+            .map((item) => ({
+              name: item.name || "Unknown",
+              url: item.url,
+              type: "application/x-mpegURL",
+            }));
+          setChannels(parsedChannels);
+          if (parsedChannels.length) {
+            setCurrentUrl(parsedChannels[0].url);
+          }
         }
       });
   }, [section]);
 
-  // Initialize Video.js once
   useEffect(() => {
     if (!playerInstance.current) {
       playerInstance.current = videojs(playerRef.current, {
@@ -65,7 +86,6 @@ export default function OlivePlayer() {
     }
   }, []);
 
-  // Update source when currentUrl changes
   useEffect(() => {
     if (playerInstance.current && currentUrl) {
       playerInstance.current.src({
@@ -75,28 +95,6 @@ export default function OlivePlayer() {
       playerInstance.current.load();
     }
   }, [currentUrl]);
-
-  // Group TV Shows -> { ShowTitle: { Season: [episodes] } }
-  const groupedShows = {};
-  if (section === "tvshows") {
-    channels.forEach((ch) => {
-      // Example: "Invincible S01E02" or "Breaking Bad Season 2 Episode 5"
-      const match = ch.name.match(/(.+?)(?:\sS?(\d+)[\sE]?\s?(\d+)?)/i);
-      let show = ch.name;
-      let season = "Season 1";
-      let episode = ch.name;
-
-      if (match) {
-        show = match[1].trim();
-        season = match[2] ? `Season ${match[2]}` : "Season 1";
-        episode = match[3] ? `Episode ${match[3]}` : ch.name;
-      }
-
-      if (!groupedShows[show]) groupedShows[show] = {};
-      if (!groupedShows[show][season]) groupedShows[show][season] = [];
-      groupedShows[show][season].push({ ...ch, episode });
-    });
-  }
 
   return (
     <div
@@ -113,12 +111,15 @@ export default function OlivePlayer() {
       {/* Sidebar */}
       <div
         style={{
-          width: sidebarOpen ? "260px" : "0px",
+          width: sidebarOpen ? "240px" : "0px",
           transition: "width 0.3s",
           backgroundColor: "rgba(26,26,26,0.95)",
           color: "#fff",
           overflowY: "auto",
           flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
           padding: sidebarOpen ? "20px" : "0px",
         }}
       >
@@ -140,63 +141,51 @@ export default function OlivePlayer() {
                 fontFamily: "'Brush Script MT', cursive",
                 fontSize: "32px",
                 marginBottom: "20px",
-                textAlign: "center",
               }}
             >
               OlivePlayer
             </h1>
 
-            {/* Channels / Shows */}
+            {/* Live TV / Movies / TV Shows */}
             {section === "tvshows" ? (
               Object.keys(groupedShows).length ? (
-                Object.entries(groupedShows).map(([show, seasons]) => (
-                  <details
-                    key={show}
-                    style={{
-                      backgroundColor: "#222",
-                      marginBottom: "10px",
-                      borderRadius: "6px",
-                      padding: "5px",
-                    }}
-                  >
+                Object.keys(groupedShows).map((show) => (
+                  <details key={show} style={{ width: "100%", marginBottom: "10px" }}>
                     <summary
                       style={{
                         cursor: "pointer",
                         padding: "10px",
-                        fontWeight: "bold",
-                        color: "#fff",
+                        backgroundColor: "#444",
+                        borderRadius: "6px",
                       }}
                     >
                       {show}
                     </summary>
-                    {Object.entries(seasons).map(([season, eps]) => (
-                      <details
-                        key={season}
-                        style={{
-                          marginLeft: "15px",
-                          marginBottom: "5px",
-                          backgroundColor: "#333",
-                          borderRadius: "4px",
-                          padding: "5px",
-                        }}
-                      >
-                        <summary style={{ cursor: "pointer", padding: "6px" }}>
+                    {Object.keys(groupedShows[show]).map((season) => (
+                      <details key={season} style={{ marginLeft: "10px" }}>
+                        <summary
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px",
+                            backgroundColor: "#555",
+                            borderRadius: "6px",
+                          }}
+                        >
                           {season}
                         </summary>
-                        {eps.map((ep, idx) => (
+                        {groupedShows[show][season].map((ep, idx) => (
                           <div
                             key={idx}
                             onClick={() => setCurrentUrl(ep.url)}
                             style={{
                               cursor: "pointer",
-                              padding: "6px",
-                              margin: "3px 0",
-                              backgroundColor:
-                                currentUrl === ep.url ? "#555" : "#444",
+                              padding: "6px 12px",
+                              backgroundColor: currentUrl === ep.url ? "#666" : "#333",
                               borderRadius: "4px",
+                              margin: "4px 0",
                             }}
                           >
-                            {ep.episode}
+                            {ep.name}
                           </div>
                         ))}
                       </details>
@@ -204,7 +193,7 @@ export default function OlivePlayer() {
                   </details>
                 ))
               ) : (
-                <p>Loading TV Shows...</p>
+                <p>No shows available.</p>
               )
             ) : channels.length ? (
               channels.map((ch, idx) => (
@@ -215,16 +204,18 @@ export default function OlivePlayer() {
                     cursor: "pointer",
                     padding: "10px",
                     marginBottom: "10px",
-                    backgroundColor:
-                      currentUrl === ch.url ? "#555" : "#333",
+                    backgroundColor: currentUrl === ch.url ? "#555" : "#333",
                     borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    width: "100%",
                   }}
                 >
-                  {ch.name}
+                  <span>{ch.name}</span>
                 </div>
               ))
             ) : (
-              <p>Loading channels...</p>
+              <p>No channels available.</p>
             )}
           </>
         )}
@@ -327,7 +318,7 @@ export default function OlivePlayer() {
         style={{
           position: "absolute",
           top: "20px",
-          left: sidebarOpen ? "270px" : "20px",
+          left: sidebarOpen ? "260px" : "20px",
           padding: "8px 12px",
           backgroundColor: "#333",
           color: "#fff",
