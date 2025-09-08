@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
-const OLIVE_LOGO = "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
+const OLIVE_LOGO =
+  "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
-export default function App() {
+export default function OlivePlayer() {
   const playerRef = useRef(null);
   const containerRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -39,7 +40,7 @@ export default function App() {
     },
   ];
 
-  // Initialize Video.js only after container is ready
+  // Initialize Video.js
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -50,24 +51,24 @@ export default function App() {
       preload: "auto",
     });
 
-    player.src({ src: currentUrl, type: channels.find(ch => ch.url === currentUrl)?.type });
+    player.src({ src: currentUrl, type: channels.find((ch) => ch.url === currentUrl)?.type });
 
     // Force resize to fix invisible UI
-    const resizeTimeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       player.trigger("resize");
     }, 300);
 
     return () => {
-      clearTimeout(resizeTimeout);
+      clearTimeout(timeout);
       player.dispose();
     };
   }, [containerRef]);
 
-  // Update source on channel change
+  // Update source when currentUrl changes
   useEffect(() => {
     if (playerRef.current) {
       const player = videojs(playerRef.current);
-      const channel = channels.find(ch => ch.url === currentUrl);
+      const channel = channels.find((ch) => ch.url === currentUrl);
       player.src({ src: currentUrl, type: channel?.type });
       player.play().catch(() => {});
       player.trigger("resize");
@@ -75,17 +76,18 @@ export default function App() {
   }, [currentUrl]);
 
   return (
-    <div style={{ display: "flex", height: "100vh", margin: 0, padding: 0 }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "sans-serif" }}>
       {/* Sidebar */}
       <div
         style={{
           width: sidebarOpen ? "250px" : "0px",
+          transition: "width 0.3s",
           backgroundColor: "#1a1a1a",
           color: "#fff",
-          padding: sidebarOpen ? "10px" : "0px",
+          padding: sidebarOpen ? "15px" : "0px",
           boxSizing: "border-box",
           overflowY: "auto",
-          transition: "0.3s",
+          flexShrink: 0,
         }}
       >
         {sidebarOpen && (
@@ -103,7 +105,7 @@ export default function App() {
           style={{
             width: "100%",
             marginBottom: "10px",
-            padding: "5px",
+            padding: "8px",
             cursor: "pointer",
             backgroundColor: "#333",
             color: "#fff",
@@ -123,10 +125,11 @@ export default function App() {
                 cursor: "pointer",
                 padding: "10px",
                 marginBottom: "10px",
-                backgroundColor: "#333",
+                backgroundColor: currentUrl === ch.url ? "#555" : "#333",
                 borderRadius: "6px",
                 display: "flex",
                 alignItems: "center",
+                transition: "background-color 0.2s",
               }}
             >
               {ch.logo && (
@@ -147,12 +150,12 @@ export default function App() {
         ref={containerRef}
         style={{
           flex: 1,
+          backgroundColor: "#000",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#000",
           minHeight: "100%",
-          minWidth: "100%",
+          position: "relative",
         }}
       >
         <video
