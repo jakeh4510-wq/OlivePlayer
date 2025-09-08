@@ -5,7 +5,10 @@ import "video.js/dist/video-js.css";
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
-// Example live broadcasts (HLS streams)
+const BACKGROUND_GIF =
+  "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTFxMG5zYzN5cmxnZGNwMm5tMWNidXZ0MXgxZjg1NWJ5ZGpyYTFtZiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/jaOXKCxtBPLieRLI0c/giphy.webp";
+
+// Example live broadcasts (HLS/MP4)
 const channels = [
   {
     name: "Big Buck Bunny HLS",
@@ -23,7 +26,7 @@ const channels = [
     type: "application/x-mpegURL",
   },
   {
-    name: "Test MP4",
+    name: "Big Buck Bunny MP4",
     url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
     type: "video/mp4",
   },
@@ -34,6 +37,7 @@ export default function OlivePlayer() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUrl, setCurrentUrl] = useState(channels[0].url);
 
+  // Initialize Video.js
   useEffect(() => {
     const player = videojs(playerRef.current, {
       autoplay: false,
@@ -55,23 +59,18 @@ export default function OlivePlayer() {
   }, [currentUrl]);
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
-      {/* Star background */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          background: "radial-gradient(#000 0%, #000 100%)",
-          overflow: "hidden",
-          zIndex: -2,
-        }}
-      >
-        <div className="stars"></div>
-      </div>
-
+    <div
+      style={{
+        display: "flex",
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
+        backgroundImage: `url(${BACKGROUND_GIF})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       {/* Sidebar */}
       <div
         style={{
@@ -129,7 +128,7 @@ export default function OlivePlayer() {
           </>
         )}
 
-        {/* Sidebar toggle */}
+        {/* Sidebar toggle button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           style={{
@@ -167,32 +166,6 @@ export default function OlivePlayer() {
           />
         </div>
       </div>
-
-      {/* Star CSS */}
-      <style>
-        {`
-          .stars {
-            width: 200%;
-            height: 200%;
-            background: transparent;
-            box-shadow: 
-              0 0 2px white,
-              50px 100px 2px white,
-              120px 50px 2px white,
-              200px 200px 2px white,
-              300px 120px 2px white,
-              400px 250px 2px white,
-              500px 80px 2px white;
-            animation: twinkle 20s linear infinite;
-          }
-
-          @keyframes twinkle {
-            0% { transform: translate(0, 0); }
-            50% { transform: translate(-50px, 50px); }
-            100% { transform: translate(0,0); }
-          }
-        `}
-      </style>
     </div>
   );
 }
