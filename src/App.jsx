@@ -13,7 +13,7 @@ const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
   tvshows:
     "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
-  movies: null, // placeholder until you have a link
+  movies: null,
 };
 
 export default function OlivePlayer() {
@@ -24,7 +24,9 @@ export default function OlivePlayer() {
   const [currentUrl, setCurrentUrl] = useState("");
   const [section, setSection] = useState("live"); // live, movies, tvshows
 
-  // Fetch and parse M3U playlist
+  // Parse and group shows
+  const [groupedShows, setGroupedShows] = useState({});
+
   useEffect(() => {
     const playlistUrl = PLAYLISTS[section];
     if (!playlistUrl) {
@@ -38,21 +40,34 @@ export default function OlivePlayer() {
       .then((text) => {
         const parsed = parse(text);
 
-        // Accept both .m3u8 (streams) and .mp4 (movies/shows)
         const parsedChannels = parsed.items
           .filter((item) => item.url)
-          .map((item) => ({
-            name: item.name || "Unknown",
-            url: item.url,
-            type: item.url.endsWith(".m3u8")
-              ? "application/x-mpegURL"
-              : "video/mp4",
-          }));
+          .map((item) => {
+            // Determine type from extension
+            const ext = item.url.split(".").pop().toLowerCase();
+            let type = "video/mp4"; // default
+            if (ext === "m3u8") type = "application/x-mpegURL";
+
+            return {
+              name: item.name || "Unknown",
+              url: item.url,
+              type,
+            };
+          });
 
         setChannels(parsedChannels);
-        if (parsedChannels.length) {
-          setCurrentUrl(parsedChannels[0].url);
-        }
+        if (parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
+
+        // Group shows by name before "SxxExx" or "Episode" keyword
+        const group = {};
+        parsedChannels.forEach((ch) => {
+          let showName = ch.name.split(/S\d+E\d+|Episode/i)[0].trim();
+          if (!showName) showName = ch.name;
+          if (!group[showName]) group[showName] = [];
+          group[showName].push(ch);
+        });
+
+        setGroupedShows(group);
       });
   }, [section]);
 
@@ -74,7 +89,7 @@ export default function OlivePlayer() {
       const selected = channels.find((ch) => ch.url === currentUrl);
       playerInstance.current.src({
         src: currentUrl,
-        type: selected ? selected.type : "application/x-mpegURL",
+        type: selected ? selected.type : "video/mp4",
       });
       playerInstance.current.load();
     }
@@ -95,7 +110,7 @@ export default function OlivePlayer() {
       {/* Sidebar */}
       <div
         style={{
-          width: sidebarOpen ? "240px" : "0px",
+          width: sidebarOpen ? "260px" : "0px",
           transition: "width 0.3s",
           backgroundColor: "rgba(26,26,26,0.95)",
           color: "#fff",
@@ -130,30 +145,61 @@ export default function OlivePlayer() {
               OlivePlayer
             </h1>
 
-            {/* Channels */}
-            {channels.length ? (
-              channels.map((ch, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setCurrentUrl(ch.url)}
-                  style={{
-                    cursor: "pointer",
-                    padding: "10px",
-                    marginBottom: "10px",
-                    backgroundColor:
-                      currentUrl === ch.url ? "#555" : "#333",
-                    borderRadius: "6px",
-                    display: "flex",
-                    alignItems: "center",
-                    width: "100%",
-                  }}
-                >
-                  <span>{ch.name}</span>
-                </div>
-              ))
-            ) : (
-              <p>No channels available.</p>
-            )}
+            {/* Channels/Shows */}
+            {section === "tvshows" || section === "movies"
+              ? Object.keys(groupedShows).map((show, idx) => (
+                  <div key={idx} style={{ width: "100%" }}>
+                    <details>
+                      <summary
+                        style={{
+                          cursor: "pointer",
+                          padding: "10px",
+                          marginBottom: "5px",
+                          backgroundColor: "#333",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        {show}
+                      </summary>
+                      <div style={{ paddingLeft: "10px" }}>
+                        {groupedShows[show].map((ep, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setCurrentUrl(ep.url)}
+                            style={{
+                              cursor: "pointer",
+                              padding: "6px",
+                              marginBottom: "4px",
+                              backgroundColor:
+                                currentUrl === ep.url ? "#555" : "#222",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            {ep.name}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </div>
+                ))
+              : channels.map((ch, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setCurrentUrl(ch.url)}
+                    style={{
+                      cursor: "pointer",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      backgroundColor: currentUrl === ch.url ? "#555" : "#333",
+                      borderRadius: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <span>{ch.name}</span>
+                  </div>
+                ))}
           </>
         )}
       </div>
