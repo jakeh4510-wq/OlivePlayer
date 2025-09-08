@@ -13,7 +13,7 @@ const PLAYLISTS = {
   tvshows:
     "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
   movies:
-    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/top-movies.m3u",
+    "https://gist.githubusercontent.com/cirrusUK/f2ec33786c4820e4b4ac4670b2a8afea/raw/320031be25bb03b3b1d5fac9f93b19c82a7e9cef/imdb250.m3u",
 };
 
 export default function OlivePlayer() {
@@ -38,7 +38,6 @@ export default function OlivePlayer() {
   const [currentMovieUrl, setCurrentMovieUrl] = useState("");
   const [currentTvUrl, setCurrentTvUrl] = useState("");
 
-  // Parse TV show names into show/season/episode
   const parseTvShowName = (name) => {
     const match = name.match(/^(.*?)\s*(\(\d{4}\))?\s*S(\d+)E(\d+)/i);
     if (match) {
@@ -53,7 +52,6 @@ export default function OlivePlayer() {
     }
   };
 
-  // Fetch playlists
   useEffect(() => {
     // Live TV
     fetch(PLAYLISTS.live)
@@ -108,7 +106,6 @@ export default function OlivePlayer() {
       });
   }, []);
 
-  // Initialize players
   useEffect(() => {
     if (!liveInstance.current && livePlayerRef.current)
       liveInstance.current = videojs(livePlayerRef.current, { controls: true, fluid: true });
@@ -118,34 +115,28 @@ export default function OlivePlayer() {
       tvInstance.current = videojs(tvPlayerRef.current, { controls: true, fluid: true });
   }, []);
 
-  // Update player sources with big play button reset
   const updatePlayerSource = (player, url) => {
     if (!player) return;
     player.pause();
     player.src({ src: url });
-    player.poster(""); // reset UI to show big play button
+    player.poster("");
     player.load();
   };
 
-  // Live TV source update
   useEffect(() => {
     updatePlayerSource(liveInstance.current, currentLiveUrl);
   }, [currentLiveUrl]);
 
-  // Movies source update
   useEffect(() => {
     updatePlayerSource(moviesInstance.current, currentMovieUrl);
   }, [currentMovieUrl]);
 
-  // TV Shows source update
   useEffect(() => {
     updatePlayerSource(tvInstance.current, currentTvUrl);
   }, [currentTvUrl]);
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
-
-    // Pause all players
     liveInstance.current?.pause();
     moviesInstance.current?.pause();
     tvInstance.current?.pause();
@@ -272,7 +263,6 @@ export default function OlivePlayer() {
 
       {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px" }}>
-        {/* Section buttons */}
         <div style={{ marginBottom: "20px" }}>
           <button
             onClick={() => handleSectionChange("live")}
@@ -294,7 +284,6 @@ export default function OlivePlayer() {
           </button>
         </div>
 
-        {/* Video players */}
         <video
           ref={livePlayerRef}
           className="video-js vjs-big-play-centered"
@@ -317,34 +306,32 @@ export default function OlivePlayer() {
           style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }}
         />
 
-        {/* TV Shows episodes */}
         {section === "tvshows" && selectedTvShow && (
           <div
             style={{
               marginTop: "20px",
-              width: "95%",
-              maxWidth: "1400px",
-              flex: 1,
-              overflowY: "auto",
               maxHeight: "300px",
+              overflowY: "auto",
+              width: "95%",
+              backgroundColor: "rgba(26,26,26,0.8)",
               padding: "10px",
-              backgroundColor: "rgba(0,0,0,0.6)",
-              borderRadius: "6px",
+              borderRadius: "8px",
+              color: "#fff",
             }}
           >
             {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
-              <div key={season} style={{ marginBottom: "10px" }}>
+              <div key={season}>
                 <div
                   onClick={() => toggleSeason(season)}
                   style={{
                     cursor: "pointer",
-                    padding: "8px",
+                    padding: "6px",
                     backgroundColor: "#444",
-                    color: "#fff",
+                    marginTop: "5px",
                     borderRadius: "4px",
                   }}
                 >
-                  {season} {seasonCollapse[season] ? "▼" : "▶"}
+                  {season}
                 </div>
                 {!seasonCollapse[season] &&
                   tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
