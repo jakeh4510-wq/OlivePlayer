@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
-const OLIVE_LOGO = "https://upload.wikimedia.org/wikipedia/commons/7/7f/Olive_icon.png";
+const OLIVE_LOGO = "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
 export default function App() {
   const playerRef = useRef(null);
-  const containerRef = useRef(null); // container with proper height
+  const containerRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUrl, setCurrentUrl] = useState(
     "https://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8"
@@ -39,7 +39,7 @@ export default function App() {
     },
   ];
 
-  // Initialize Video.js after container mounts
+  // Initialize Video.js only after container is ready
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -52,18 +52,18 @@ export default function App() {
 
     player.src({ src: currentUrl, type: channels.find(ch => ch.url === currentUrl)?.type });
 
-    // Force resize to fix white screen / invisible UI
-    const timeout = setTimeout(() => {
+    // Force resize to fix invisible UI
+    const resizeTimeout = setTimeout(() => {
       player.trigger("resize");
-    }, 200);
+    }, 300);
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(resizeTimeout);
       player.dispose();
     };
   }, [containerRef]);
 
-  // Update source when currentUrl changes
+  // Update source on channel change
   useEffect(() => {
     if (playerRef.current) {
       const player = videojs(playerRef.current);
