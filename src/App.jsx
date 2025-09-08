@@ -15,14 +15,15 @@ export default function OlivePlayer() {
   const [channels, setChannels] = useState([]);
   const [currentUrl, setCurrentUrl] = useState("");
 
-  // Fetch and parse IPTV M3U playlist
+  // Fetch and parse M3U playlist, filter only .m3u8 streams
   useEffect(() => {
     fetch("https://iptv-org.github.io/iptv/index.m3u")
       .then((res) => res.text())
       .then((text) => {
         const parsed = parse(text);
+
         const parsedChannels = parsed.items
-          .filter((item) => item.url) // ignore empty URLs
+          .filter((item) => item.url && item.url.endsWith(".m3u8"))
           .map((item) => ({
             name: item.name || "Unknown Channel",
             url: item.url,
@@ -30,6 +31,7 @@ export default function OlivePlayer() {
           }));
 
         setChannels(parsedChannels);
+
         if (parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
       });
   }, []);
@@ -47,7 +49,7 @@ export default function OlivePlayer() {
 
     player.src({ src: currentUrl, type: "application/x-mpegURL" });
 
-    // Attempt to autoplay
+    // Play after changing channel
     player.ready(() => {
       try {
         player.load();
@@ -95,7 +97,6 @@ export default function OlivePlayer() {
       >
         {sidebarOpen && (
           <>
-            {/* Logo + Title */}
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
