@@ -6,9 +6,8 @@ const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
 const BACKGROUND_GIF =
-  "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTFxMG5zYzN5cmxnZGNwMm5tMWNidXZ0MXgxZjg1NWJ5ZGpyYTFtZiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/jaOXKCxtBPLieRLI0c/giphy.webp";
+  "https://wallpaperaccess.com/full/869923.gif";
 
-// Example live broadcasts (HLS/MP4)
 const channels = [
   {
     name: "Big Buck Bunny HLS",
@@ -37,7 +36,6 @@ export default function OlivePlayer() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUrl, setCurrentUrl] = useState(channels[0].url);
 
-  // Initialize Video.js
   useEffect(() => {
     const player = videojs(playerRef.current, {
       autoplay: false,
@@ -127,24 +125,6 @@ export default function OlivePlayer() {
             ))}
           </>
         )}
-
-        {/* Sidebar toggle button */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            marginTop: "auto",
-            padding: "8px 12px",
-            backgroundColor: "#333",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            width: sidebarOpen ? "100%" : "40px",
-            transition: "width 0.3s",
-          }}
-        >
-          {sidebarOpen ? "Hide Sidebar" : "☰"}
-        </button>
       </div>
 
       {/* Main content */}
@@ -166,6 +146,25 @@ export default function OlivePlayer() {
           />
         </div>
       </div>
+
+      {/* Sidebar toggle button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: sidebarOpen ? "260px" : "20px",
+          padding: "8px 12px",
+          backgroundColor: "#333",
+          color: "#fff",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          zIndex: 1000,
+        }}
+      >
+        {sidebarOpen ? "Hide Sidebar" : "☰"}
+      </button>
     </div>
   );
 }
