@@ -7,7 +7,7 @@ const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
 const BACKGROUND_GIF =
-  "https://wallpaperaccess.com/full/8088685.gif";
+  "https://wallpaperaccess.com/full/869923.gif";
 
 export default function OlivePlayer() {
   const playerRef = useRef(null);
@@ -24,24 +24,25 @@ export default function OlivePlayer() {
         parser.push(text);
         parser.end();
 
-        // Some M3U files use segments, some use playlist items; handle both
         let parsedChannels = [];
-        if(parser.manifest.segments?.length){
+
+        // Parse segments or playlists
+        if (parser.manifest.segments?.length) {
           parsedChannels = parser.manifest.segments.map((seg, idx) => ({
-            name: seg.title || `Channel ${idx + 1}`,
+            name: seg.title || seg.attributes?.["tvg-name"] || `Channel ${idx + 1}`,
             url: seg.uri,
             type: "application/x-mpegURL",
           }));
-        } else if(parser.manifest.playlists?.length){
+        } else if (parser.manifest.playlists?.length) {
           parsedChannels = parser.manifest.playlists.map((pl, idx) => ({
-            name: pl.attributes?.title || `Channel ${idx + 1}`,
+            name: pl.attributes?.title || pl.attributes?.["tvg-name"] || `Channel ${idx + 1}`,
             url: pl.uri,
             type: "application/x-mpegURL",
           }));
         }
 
         setChannels(parsedChannels);
-        if(parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
+        if (parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
       });
   }, []);
 
@@ -57,6 +58,15 @@ export default function OlivePlayer() {
     });
 
     player.src({ src: currentUrl, type: "application/x-mpegURL" });
+
+    // Attempt to autoplay when switching channels
+    player.ready(() => {
+      try {
+        player.play();
+      } catch (e) {
+        console.log("Autoplay blocked:", e);
+      }
+    });
 
     const timeout = setTimeout(() => player.trigger("resize"), 300);
 
