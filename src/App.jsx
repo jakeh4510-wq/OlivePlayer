@@ -1,49 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
+const VIDEO_URL =
+  "https://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8"; // HLS test stream
+
 export default function OlivePlayer() {
   const playerRef = useRef(null);
-  const containerRef = useRef(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUrl, setCurrentUrl] = useState(
-    "https://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8"
-  );
 
-  const channels = [
-    {
-      name: "Big Buck Bunny HLS",
-      url: "https://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8",
-      type: "application/x-mpegURL",
-      logo: "https://peach.blender.org/wp-content/uploads/title_anouncement.jpg",
-    },
-    {
-      name: "Sintel HLS",
-      url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
-      type: "application/x-mpegURL",
-      logo: "https://durian.blender.org/wp-content/uploads/2010/04/sintel_poster.jpg",
-    },
-    {
-      name: "Tears of Steel HLS",
-      url: "https://bitdash-a.akamaihd.net/content/tears-of-steel/tears-of-steel.m3u8",
-      type: "application/x-mpegURL",
-      logo: "https://mango.blender.org/wp-content/uploads/2013/05/tears_of_steel_poster.jpg",
-    },
-    {
-      name: "Big Buck Bunny MP4",
-      url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
-      type: "video/mp4",
-      logo: "https://peach.blender.org/wp-content/uploads/title_anouncement.jpg",
-    },
-  ];
-
-  // Initialize Video.js
   useEffect(() => {
-    if (!containerRef.current) return;
-
     const player = videojs(playerRef.current, {
       autoplay: false,
       controls: true,
@@ -51,9 +19,8 @@ export default function OlivePlayer() {
       preload: "auto",
     });
 
-    player.src({ src: currentUrl, type: channels.find((ch) => ch.url === currentUrl)?.type });
+    player.src({ src: VIDEO_URL, type: "application/x-mpegURL" });
 
-    // Force resize to fix invisible UI
     const timeout = setTimeout(() => {
       player.trigger("resize");
     }, 300);
@@ -62,115 +29,42 @@ export default function OlivePlayer() {
       clearTimeout(timeout);
       player.dispose();
     };
-  }, [containerRef]);
-
-  // Update source when currentUrl changes
-  useEffect(() => {
-    if (playerRef.current) {
-      const player = videojs(playerRef.current);
-      const channel = channels.find((ch) => ch.url === currentUrl);
-      player.src({ src: currentUrl, type: channel?.type });
-      player.play().catch(() => {});
-      player.trigger("resize");
-    }
-  }, [currentUrl]);
+  }, []);
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "sans-serif" }}>
-      {/* Sidebar */}
-      <div
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#000",
+        padding: "20px",
+      }}
+    >
+      <img
+        src={OLIVE_LOGO}
+        alt="Olive Logo"
+        style={{ width: "120px", height: "120px", marginBottom: "15px" }}
+      />
+      <h1
         style={{
-          width: sidebarOpen ? "250px" : "0px",
-          transition: "width 0.3s",
-          backgroundColor: "#1a1a1a",
           color: "#fff",
-          padding: sidebarOpen ? "15px" : "0px",
-          boxSizing: "border-box",
-          overflowY: "auto",
-          flexShrink: 0,
+          fontFamily: "'Brush Script MT', cursive",
+          fontSize: "36px",
+          marginBottom: "20px",
         }}
       >
-        {sidebarOpen && (
-          <div style={{ textAlign: "center", marginBottom: "15px" }}>
-            <img
-              src={OLIVE_LOGO}
-              alt="Olive Logo"
-              style={{ width: "80px", height: "80px", borderRadius: "50%" }}
-            />
-          </div>
-        )}
-
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            width: "100%",
-            marginBottom: "10px",
-            padding: "8px",
-            cursor: "pointer",
-            backgroundColor: "#333",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-          }}
-        >
-          {sidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
-        </button>
-
-        {sidebarOpen &&
-          channels.map((ch, idx) => (
-            <div
-              key={idx}
-              onClick={() => setCurrentUrl(ch.url)}
-              style={{
-                cursor: "pointer",
-                padding: "10px",
-                marginBottom: "10px",
-                backgroundColor: currentUrl === ch.url ? "#555" : "#333",
-                borderRadius: "6px",
-                display: "flex",
-                alignItems: "center",
-                transition: "background-color 0.2s",
-              }}
-            >
-              {ch.logo && (
-                <img
-                  src={ch.logo}
-                  alt={ch.name}
-                  style={{ width: "40px", height: "40px", marginRight: "10px", borderRadius: "4px" }}
-                  onError={(e) => (e.target.style.display = "none")}
-                />
-              )}
-              <span>{ch.name}</span>
-            </div>
-          ))}
-      </div>
-
-      {/* Video container */}
-      <div
-        ref={containerRef}
-        style={{
-          flex: 1,
-          backgroundColor: "#000",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100%",
-          position: "relative",
-        }}
-      >
+        OlivePlayer
+      </h1>
+      <div style={{ width: "80%", maxWidth: "800px" }}>
         <video
           ref={playerRef}
           className="video-js vjs-big-play-centered"
           controls
           playsInline
-          style={{
-            width: "100%",
-            height: "100%",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            backgroundColor: "#000",
-            zIndex: 1,
-          }}
+          style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
         />
       </div>
     </div>
