@@ -37,7 +37,7 @@ export default function OlivePlayer() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUrl, setCurrentUrl] = useState(channels[0].url);
 
-  // Video.js initialization (keep video section untouched)
+  // Video.js initialization (kept unchanged)
   useEffect(() => {
     const player = videojs(playerRef.current, {
       autoplay: false,
@@ -113,11 +113,9 @@ export default function OlivePlayer() {
         style={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
           position: "relative",
-          padding: "20px",
         }}
       >
         {/* Show sidebar toggle button when hidden */}
@@ -141,32 +139,42 @@ export default function OlivePlayer() {
           </button>
         )}
 
-        {/* Olive Logo + App Title */}
-        <img
-          src={OLIVE_LOGO}
-          alt="Olive Logo"
-          style={{ width: "120px", height: "120px", marginBottom: "15px" }}
-        />
-        <h1
+        {/* Centered Video + Logo + Title */}
+        <div
           style={{
-            color: "#fff",
-            fontFamily: "'Brush Script MT', cursive",
-            fontSize: "36px",
-            marginBottom: "20px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
           }}
         >
-          OlivePlayer
-        </h1>
-
-        {/* Video Player */}
-        <div style={{ width: "90%", maxWidth: "1000px" }}>
-          <video
-            ref={playerRef}
-            className="video-js vjs-big-play-centered"
-            controls
-            playsInline
-            style={{ width: "100%", height: "500px", backgroundColor: "#000" }}
+          <img
+            src={OLIVE_LOGO}
+            alt="Olive Logo"
+            style={{ width: "120px", height: "120px", marginBottom: "15px" }}
           />
+          <h1
+            style={{
+              color: "#fff",
+              fontFamily: "'Brush Script MT', cursive",
+              fontSize: "36px",
+              marginBottom: "20px",
+            }}
+          >
+            OlivePlayer
+          </h1>
+
+          {/* Video Player */}
+          <div style={{ width: "90%", maxWidth: "1000px" }}>
+            <video
+              ref={playerRef}
+              className="video-js vjs-big-play-centered"
+              controls
+              playsInline
+              style={{ width: "100%", height: "500px", backgroundColor: "#000" }}
+            />
+          </div>
         </div>
       </div>
     </div>
