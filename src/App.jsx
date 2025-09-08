@@ -5,33 +5,27 @@ import "video.js/dist/video-js.css";
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
-const BACKGROUND_GIF =
-  "https://i.gifer.com/ZZ5H.gif"; // Replace with any smooth dark looping GIF you like
-
+// Example live broadcasts (HLS streams)
 const channels = [
   {
     name: "Big Buck Bunny HLS",
     url: "https://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8",
     type: "application/x-mpegURL",
-    logo: "https://peach.blender.org/wp-content/uploads/title_anouncement.jpg",
   },
   {
     name: "Sintel HLS",
     url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
     type: "application/x-mpegURL",
-    logo: "https://durian.blender.org/wp-content/uploads/2010/04/sintel_poster.jpg",
   },
   {
     name: "Tears of Steel HLS",
     url: "https://bitdash-a.akamaihd.net/content/tears-of-steel/tears-of-steel.m3u8",
     type: "application/x-mpegURL",
-    logo: "https://mango.blender.org/wp-content/uploads/2013/05/tears_of_steel_poster.jpg",
   },
   {
-    name: "Big Buck Bunny MP4",
+    name: "Test MP4",
     url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
     type: "video/mp4",
-    logo: "https://peach.blender.org/wp-content/uploads/title_anouncement.jpg",
   },
 ];
 
@@ -40,7 +34,6 @@ export default function OlivePlayer() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUrl, setCurrentUrl] = useState(channels[0].url);
 
-  // Initialize Video.js
   useEffect(() => {
     const player = videojs(playerRef.current, {
       autoplay: false,
@@ -62,23 +55,29 @@ export default function OlivePlayer() {
   }, [currentUrl]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        width: "100vw",
-        backgroundImage: `url(${BACKGROUND_GIF})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "repeat",
-      }}
-    >
+    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
+      {/* Star background */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "radial-gradient(#000 0%, #000 100%)",
+          overflow: "hidden",
+          zIndex: -2,
+        }}
+      >
+        <div className="stars"></div>
+      </div>
+
       {/* Sidebar */}
       <div
         style={{
           width: sidebarOpen ? "240px" : "0px",
           transition: "width 0.3s",
-          backgroundColor: "rgba(26, 26, 26, 0.95)",
+          backgroundColor: "rgba(26,26,26,0.95)",
           color: "#fff",
           overflowX: "hidden",
           flexShrink: 0,
@@ -90,7 +89,7 @@ export default function OlivePlayer() {
       >
         {sidebarOpen && (
           <>
-            {/* Logo and title */}
+            {/* Logo + Title */}
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
@@ -107,7 +106,7 @@ export default function OlivePlayer() {
               OlivePlayer
             </h1>
 
-            {/* Channel list */}
+            {/* Channels */}
             {channels.map((ch, idx) => (
               <div
                 key={idx}
@@ -124,21 +123,13 @@ export default function OlivePlayer() {
                   transition: "background-color 0.2s",
                 }}
               >
-                {ch.logo && (
-                  <img
-                    src={ch.logo}
-                    alt={ch.name}
-                    style={{ width: "40px", height: "40px", marginRight: "10px", borderRadius: "4px" }}
-                    onError={(e) => (e.target.style.display = "none")}
-                  />
-                )}
                 <span>{ch.name}</span>
               </div>
             ))}
           </>
         )}
 
-        {/* Sidebar toggle button */}
+        {/* Sidebar toggle */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           style={{
@@ -166,7 +157,7 @@ export default function OlivePlayer() {
           alignItems: "center",
         }}
       >
-        <div style={{ width: "95%", maxWidth: "1200px" }}>
+        <div style={{ width: "95%", maxWidth: "1400px" }}>
           <video
             ref={playerRef}
             className="video-js vjs-big-play-centered"
@@ -176,6 +167,32 @@ export default function OlivePlayer() {
           />
         </div>
       </div>
+
+      {/* Star CSS */}
+      <style>
+        {`
+          .stars {
+            width: 200%;
+            height: 200%;
+            background: transparent;
+            box-shadow: 
+              0 0 2px white,
+              50px 100px 2px white,
+              120px 50px 2px white,
+              200px 200px 2px white,
+              300px 120px 2px white,
+              400px 250px 2px white,
+              500px 80px 2px white;
+            animation: twinkle 20s linear infinite;
+          }
+
+          @keyframes twinkle {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(-50px, 50px); }
+            100% { transform: translate(0,0); }
+          }
+        `}
+      </style>
     </div>
   );
 }
