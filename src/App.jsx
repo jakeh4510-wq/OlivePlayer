@@ -1,273 +1,193 @@
-import React, { useState, useEffect, useRef } from "react";
-import videojs from "video.js";
-import "video.js/dist/video-js.css";
-import { parse } from "iptv-playlist-parser";
+import { useEffect, useState } from "react";
 
-const OLIVE_LOGO =
-  "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
-
-const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
-
-// Playlist sources
-const PLAYLISTS = {
-  live: "https://iptv-org.github.io/iptv/index.m3u",
-  tvshows:
-    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
-  movies: null, // placeholder until you have a link
-};
-
-export default function OlivePlayer() {
-  const playerRef = useRef(null);
-  const playerInstance = useRef(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+export default function App() {
   const [channels, setChannels] = useState([]);
-  const [currentUrl, setCurrentUrl] = useState("");
-  const [section, setSection] = useState("live"); // live, movies, tvshows
+  const [shows, setShows] = useState([]);
+  const [currentUrl, setCurrentUrl] = useState(null);
 
-  // Fetch and parse M3U playlist
+  // Load Live TV
   useEffect(() => {
-    const playlistUrl = PLAYLISTS[section];
-    if (!playlistUrl) {
-      setChannels([]);
-      setCurrentUrl("");
-      return;
-    }
-
-    fetch(playlistUrl)
+    fetch("https://iptv-org.github.io/iptv/index.m3u")
       .then((res) => res.text())
-      .then((text) => {
-        const parsed = parse(text);
-
-        const parsedChannels = parsed.items
-          .filter((item) => item.url) // accept all URLs
-          .map((item) => ({
-            name: item.name || "Unknown",
-            url: item.url,
-            type: item.url.endsWith(".m3u8")
-              ? "application/x-mpegURL"
-              : "video/mp4", // fallback for mp4 or others
-          }));
-
-        setChannels(parsedChannels);
-        if (parsedChannels.length) {
-          setCurrentUrl(parsedChannels[0].url);
-        }
-      })
-      .catch((err) => console.error("Playlist load error:", err));
-  }, [section]);
-
-  // Initialize Video.js once
-  useEffect(() => {
-    if (!playerInstance.current) {
-      playerInstance.current = videojs(playerRef.current, {
-        autoplay: false,
-        controls: true,
-        fluid: true,
-        preload: "auto",
-      });
-    }
+      .then(parseM3U)
+      .then(setChannels)
+      .catch((err) => console.error("Error loading channels:", err));
   }, []);
 
-  // Update source when currentUrl changes
+  // Load TV Shows
   useEffect(() => {
-    if (playerInstance.current && currentUrl) {
-      playerInstance.current.src({
-        src: currentUrl,
-        type: currentUrl.endsWith(".m3u8")
-          ? "application/x-mpegURL"
-          : "video/mp4",
-      });
-      playerInstance.current.load();
+    fetch(
+      "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u"
+    )
+      .then((res) => res.text())
+      .then(parseM3U)
+      .then(setShows)
+      .catch((err) => console.error("Error loading shows:", err));
+  }, []);
+
+  // Parse M3U into objects
+  function parseM3U(data) {
+    const lines = data.split("\n");
+    const list = [];
+    let currentName = "";
+    lines.forEach((line) => {
+      if (line.startsWith("#EXTINF:")) {
+        const name = line.split(",").pop().trim();
+        currentName = name;
+      } else if (line.startsWith("http")) {
+        list.push({ name: currentName, url: line.trim() });
+      }
+    });
+    return list;
+  }
+
+  // Group shows into collapsible sections
+  const groupedShows = shows.reduce((groups, ch) => {
+    const match = ch.name.match(/(.+?)\s(S\d+E\d+|Season\s\d+|Episode\s\d+)/i);
+    const showTitle = match ? match[1].trim() : ch.name;
+
+    if (!groups[showTitle]) {
+      groups[showTitle] = [];
     }
-  }, [currentUrl]);
+    groups[showTitle].push(ch);
+    return groups;
+  }, {});
 
   return (
     <div
       style={{
-        display: "flex",
         height: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-        backgroundImage: `url(${BACKGROUND_GIF})`,
+        display: "flex",
+        backgroundImage:
+          "url('https://wallpaperaccess.com/full/869923.gif')",
         backgroundSize: "cover",
         backgroundPosition: "center",
+        color: "#fff",
       }}
     >
       {/* Sidebar */}
       <div
         style={{
-          width: sidebarOpen ? "240px" : "0px",
-          transition: "width 0.3s",
-          backgroundColor: "rgba(26,26,26,0.95)",
-          color: "#fff",
-          overflowX: "hidden",
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: sidebarOpen ? "20px" : "0px",
+          width: "280px",
+          backgroundColor: "rgba(0,0,0,0.85)",
+          padding: "20px",
+          overflowY: "auto",
         }}
       >
-        {sidebarOpen && (
-          <>
-            <img
-              src={OLIVE_LOGO}
-              alt="Olive Logo"
-              style={{
-                width: "120px",
-                height: "120px",
-                borderRadius: "50%",
-                marginBottom: "10px",
-              }}
-            />
-            <h1
-              style={{
-                color: "#fff",
-                fontFamily: "'Brush Script MT', cursive",
-                fontSize: "32px",
-                marginBottom: "20px",
-              }}
-            >
-              OlivePlayer
-            </h1>
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <img
+            src="https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0"
+            alt="Olive Logo"
+            style={{ width: "100px", marginBottom: "10px" }}
+          />
+          <h1 style={{ fontFamily: "cursive", fontSize: "24px" }}>
+            OlivePlayer
+          </h1>
+        </div>
 
-            {/* Channels */}
-            {channels.length ? (
-              channels.map((ch, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setCurrentUrl(ch.url)}
+        {/* Live TV */}
+        <h2 style={{ fontSize: "18px", marginBottom: "10px" }}>📺 Live TV</h2>
+        <div>
+          {channels.length ? (
+            channels.slice(0, 50).map((ch, idx) => (
+              <div
+                key={idx}
+                onClick={() => setCurrentUrl(ch.url)}
+                style={{
+                  cursor: "pointer",
+                  padding: "8px",
+                  marginBottom: "5px",
+                  backgroundColor:
+                    currentUrl === ch.url ? "#555" : "rgba(255,255,255,0.1)",
+                  borderRadius: "4px",
+                }}
+              >
+                {ch.name || `Channel ${idx + 1}`}
+              </div>
+            ))
+          ) : (
+            <p>Loading channels...</p>
+          )}
+        </div>
+
+        {/* TV Shows */}
+        <h2 style={{ fontSize: "18px", margin: "20px 0 10px" }}>
+          🎬 TV Shows
+        </h2>
+        <div>
+          {Object.keys(groupedShows).length ? (
+            Object.entries(groupedShows).map(([showTitle, episodes], idx) => (
+              <details
+                key={idx}
+                style={{
+                  backgroundColor: "#222",
+                  marginBottom: "10px",
+                  borderRadius: "6px",
+                  width: "100%",
+                }}
+              >
+                <summary
                   style={{
                     cursor: "pointer",
                     padding: "10px",
-                    marginBottom: "10px",
-                    backgroundColor:
-                      currentUrl === ch.url ? "#555" : "#333",
-                    borderRadius: "6px",
-                    display: "flex",
-                    alignItems: "center",
-                    width: "100%",
+                    fontWeight: "bold",
+                    color: "#fff",
                   }}
                 >
-                  <span>{ch.name}</span>
+                  {showTitle}
+                </summary>
+                <div style={{ paddingLeft: "15px" }}>
+                  {episodes.map((ep, epIdx) => (
+                    <div
+                      key={epIdx}
+                      onClick={() => setCurrentUrl(ep.url)}
+                      style={{
+                        cursor: "pointer",
+                        padding: "8px",
+                        marginBottom: "5px",
+                        backgroundColor:
+                          currentUrl === ep.url ? "#555" : "#333",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {ep.name}
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : (
-              <p>No channels available.</p>
-            )}
-          </>
-        )}
+              </details>
+            ))
+          ) : (
+            <p>Loading shows...</p>
+          )}
+        </div>
       </div>
 
-      {/* Main content */}
+      {/* Main Player */}
       <div
         style={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        {/* Top navigation */}
-        <div style={{ marginBottom: "20px" }}>
-          <button
-            onClick={() => setSection("live")}
-            style={{
-              margin: "0 10px",
-              padding: "10px 20px",
-              background: section === "live" ? "#28a745" : "#333",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
-            Live TV
-          </button>
-          <button
-            onClick={() => setSection("movies")}
-            style={{
-              margin: "0 10px",
-              padding: "10px 20px",
-              background: section === "movies" ? "#28a745" : "#333",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
-            Movies
-          </button>
-          <button
-            onClick={() => setSection("tvshows")}
-            style={{
-              margin: "0 10px",
-              padding: "10px 20px",
-              background: section === "tvshows" ? "#28a745" : "#333",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
-            TV Shows
-          </button>
-        </div>
-
-        {/* Video player */}
-        <div style={{ width: "95%", maxWidth: "1400px", textAlign: "center" }}>
+        {currentUrl ? (
           <video
-            ref={playerRef}
-            className="video-js vjs-big-play-centered"
+            key={currentUrl}
+            src={currentUrl}
             controls
-            playsInline
-            style={{ width: "100%", height: "700px", backgroundColor: "#000" }}
-          />
-          <button
-            onClick={() => {
-              if (playerInstance.current) {
-                try {
-                  playerInstance.current.play();
-                } catch (e) {
-                  console.log("Play blocked:", e);
-                }
-              }
-            }}
+            autoPlay={false}
             style={{
-              marginTop: "10px",
-              padding: "10px 20px",
-              fontSize: "16px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "#28a745",
-              color: "#fff",
-              cursor: "pointer",
+              width: "80%",
+              height: "80%",
+              backgroundColor: "#000",
+              borderRadius: "10px",
             }}
-          >
-            Play
-          </button>
-        </div>
+          />
+        ) : (
+          <p>Select a channel or show</p>
+        )}
       </div>
-
-      {/* Sidebar toggle button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: sidebarOpen ? "260px" : "20px",
-          padding: "8px 12px",
-          backgroundColor: "#333",
-          color: "#fff",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          zIndex: 1000,
-        }}
-      >
-        {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
-      </button>
     </div>
   );
 }
