@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
+import { Parser } from "m3u8-parser";
 
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
@@ -8,35 +9,46 @@ const OLIVE_LOGO =
 const BACKGROUND_GIF =
   "https://wallpaperaccess.com/full/8088685.gif";
 
-const channels = [
-  {
-    name: "Big Buck Bunny HLS",
-    url: "https://playertest.longtailvideo.com/adaptive/bbbfull/bbbfull.m3u8",
-    type: "application/x-mpegURL",
-  },
-  {
-    name: "Sintel HLS",
-    url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
-    type: "application/x-mpegURL",
-  },
-  {
-    name: "Tears of Steel HLS",
-    url: "https://bitdash-a.akamaihd.net/content/tears-of-steel/tears-of-steel.m3u8",
-    type: "application/x-mpegURL",
-  },
-  {
-    name: "Big Buck Bunny MP4",
-    url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
-    type: "video/mp4",
-  },
-];
-
 export default function OlivePlayer() {
   const playerRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUrl, setCurrentUrl] = useState(channels[0].url);
+  const [channels, setChannels] = useState([]);
+  const [currentUrl, setCurrentUrl] = useState("");
 
+  // Fetch and parse M3U playlist
   useEffect(() => {
+    fetch("https://iptv-org.github.io/iptv/index.m3u")
+      .then((res) => res.text())
+      .then((text) => {
+        const parser = new Parser();
+        parser.push(text);
+        parser.end();
+
+        // Some M3U files use segments, some use playlist items; handle both
+        let parsedChannels = [];
+        if(parser.manifest.segments?.length){
+          parsedChannels = parser.manifest.segments.map((seg, idx) => ({
+            name: seg.title || `Channel ${idx + 1}`,
+            url: seg.uri,
+            type: "application/x-mpegURL",
+          }));
+        } else if(parser.manifest.playlists?.length){
+          parsedChannels = parser.manifest.playlists.map((pl, idx) => ({
+            name: pl.attributes?.title || `Channel ${idx + 1}`,
+            url: pl.uri,
+            type: "application/x-mpegURL",
+          }));
+        }
+
+        setChannels(parsedChannels);
+        if(parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
+      });
+  }, []);
+
+  // Initialize Video.js player
+  useEffect(() => {
+    if (!currentUrl) return;
+
     const player = videojs(playerRef.current, {
       autoplay: false,
       controls: true,
@@ -44,11 +56,9 @@ export default function OlivePlayer() {
       preload: "auto",
     });
 
-    player.src({ src: currentUrl, type: channels.find((ch) => ch.url === currentUrl)?.type });
+    player.src({ src: currentUrl, type: "application/x-mpegURL" });
 
-    const timeout = setTimeout(() => {
-      player.trigger("resize");
-    }, 300);
+    const timeout = setTimeout(() => player.trigger("resize"), 300);
 
     return () => {
       clearTimeout(timeout);
@@ -104,25 +114,29 @@ export default function OlivePlayer() {
             </h1>
 
             {/* Channels */}
-            {channels.map((ch, idx) => (
-              <div
-                key={idx}
-                onClick={() => setCurrentUrl(ch.url)}
-                style={{
-                  cursor: "pointer",
-                  padding: "10px",
-                  marginBottom: "10px",
-                  backgroundColor: currentUrl === ch.url ? "#555" : "#333",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  transition: "background-color 0.2s",
-                }}
-              >
-                <span>{ch.name}</span>
-              </div>
-            ))}
+            {channels.length ? (
+              channels.map((ch, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setCurrentUrl(ch.url)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    backgroundColor: currentUrl === ch.url ? "#555" : "#333",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    width: "100%",
+                    transition: "background-color 0.2s",
+                  }}
+                >
+                  <span>{ch.name}</span>
+                </div>
+              ))
+            ) : (
+              <p>Loading channels...</p>
+            )}
           </>
         )}
       </div>
@@ -163,7 +177,7 @@ export default function OlivePlayer() {
           zIndex: 1000,
         }}
       >
-        {sidebarOpen ? "Hide Sidebar" : "☰"}
+        {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
       </button>
     </div>
   );
