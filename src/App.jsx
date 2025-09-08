@@ -11,6 +11,7 @@ const BACKGROUND_GIF =
 
 export default function OlivePlayer() {
   const playerRef = useRef(null);
+  const playerInstance = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [channels, setChannels] = useState([]);
   const [currentUrl, setCurrentUrl] = useState("");
@@ -36,26 +37,27 @@ export default function OlivePlayer() {
       });
   }, []);
 
-  // Initialize Video.js player
+  // Initialize Video.js player only once
   useEffect(() => {
-    if (!currentUrl) return;
+    if (!playerInstance.current) {
+      playerInstance.current = videojs(playerRef.current, {
+        autoplay: false,
+        controls: true,
+        fluid: true,
+        preload: "auto",
+      });
+    }
+  }, []);
 
-    const player = videojs(playerRef.current, {
-      autoplay: false,
-      controls: true,
-      fluid: true,
-      preload: "auto",
-    });
-
-    player.src({ src: currentUrl, type: "application/x-mpegURL" });
-
-    // Trigger resize for proper layout
-    const timeout = setTimeout(() => player.trigger("resize"), 300);
-
-    return () => {
-      clearTimeout(timeout);
-      player.dispose();
-    };
+  // Update source when currentUrl changes
+  useEffect(() => {
+    if (playerInstance.current && currentUrl) {
+      playerInstance.current.src({
+        src: currentUrl,
+        type: "application/x-mpegURL",
+      });
+      playerInstance.current.load();
+    }
   }, [currentUrl]);
 
   return (
@@ -88,7 +90,6 @@ export default function OlivePlayer() {
       >
         {sidebarOpen && (
           <>
-            {/* Logo + Title */}
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
@@ -157,14 +158,14 @@ export default function OlivePlayer() {
             playsInline
             style={{ width: "100%", height: "700px", backgroundColor: "#000" }}
           />
-          {/* Dedicated Play Button */}
           <button
             onClick={() => {
-              const player = videojs(playerRef.current);
-              try {
-                player.play();
-              } catch (e) {
-                console.log("Play blocked:", e);
+              if (playerInstance.current) {
+                try {
+                  playerInstance.current.play();
+                } catch (e) {
+                  console.log("Play blocked:", e);
+                }
               }
             }}
             style={{
