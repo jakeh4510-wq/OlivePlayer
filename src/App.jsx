@@ -39,18 +39,21 @@ export default function OlivePlayer() {
         const parsed = parse(text);
 
         const parsedChannels = parsed.items
-          .filter((item) => item.url && item.url.endsWith(".m3u8"))
+          .filter((item) => item.url) // accept all URLs
           .map((item) => ({
             name: item.name || "Unknown",
             url: item.url,
-            type: "application/x-mpegURL",
+            type: item.url.endsWith(".m3u8")
+              ? "application/x-mpegURL"
+              : "video/mp4", // fallback for mp4 or others
           }));
 
         setChannels(parsedChannels);
         if (parsedChannels.length) {
           setCurrentUrl(parsedChannels[0].url);
         }
-      });
+      })
+      .catch((err) => console.error("Playlist load error:", err));
   }, [section]);
 
   // Initialize Video.js once
@@ -70,7 +73,9 @@ export default function OlivePlayer() {
     if (playerInstance.current && currentUrl) {
       playerInstance.current.src({
         src: currentUrl,
-        type: "application/x-mpegURL",
+        type: currentUrl.endsWith(".m3u8")
+          ? "application/x-mpegURL"
+          : "video/mp4",
       });
       playerInstance.current.load();
     }
