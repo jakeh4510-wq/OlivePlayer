@@ -6,8 +6,15 @@ import { parse } from "iptv-playlist-parser";
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
-const BACKGROUND_GIF =
-  "https://wallpaperaccess.com/full/869923.gif";
+const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
+
+// Playlist sources
+const PLAYLISTS = {
+  live: "https://iptv-org.github.io/iptv/index.m3u",
+  tvshows:
+    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
+  movies: null, // placeholder until you have a link
+};
 
 export default function OlivePlayer() {
   const playerRef = useRef(null);
@@ -15,10 +22,18 @@ export default function OlivePlayer() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [channels, setChannels] = useState([]);
   const [currentUrl, setCurrentUrl] = useState("");
+  const [section, setSection] = useState("live"); // live, movies, tvshows
 
-  // Fetch and parse M3U playlist, filter only .m3u8 streams
+  // Fetch and parse M3U playlist
   useEffect(() => {
-    fetch("https://iptv-org.github.io/iptv/index.m3u")
+    const playlistUrl = PLAYLISTS[section];
+    if (!playlistUrl) {
+      setChannels([]);
+      setCurrentUrl("");
+      return;
+    }
+
+    fetch(playlistUrl)
       .then((res) => res.text())
       .then((text) => {
         const parsed = parse(text);
@@ -26,18 +41,19 @@ export default function OlivePlayer() {
         const parsedChannels = parsed.items
           .filter((item) => item.url && item.url.endsWith(".m3u8"))
           .map((item) => ({
-            name: item.name || "Unknown Channel",
+            name: item.name || "Unknown",
             url: item.url,
             type: "application/x-mpegURL",
           }));
 
         setChannels(parsedChannels);
-
-        if (parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
+        if (parsedChannels.length) {
+          setCurrentUrl(parsedChannels[0].url);
+        }
       });
-  }, []);
+  }, [section]);
 
-  // Initialize Video.js player only once
+  // Initialize Video.js once
   useEffect(() => {
     if (!playerInstance.current) {
       playerInstance.current = videojs(playerRef.current, {
@@ -70,7 +86,6 @@ export default function OlivePlayer() {
         backgroundImage: `url(${BACKGROUND_GIF})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
       }}
     >
       {/* Sidebar */}
@@ -127,14 +142,13 @@ export default function OlivePlayer() {
                     display: "flex",
                     alignItems: "center",
                     width: "100%",
-                    transition: "background-color 0.2s",
                   }}
                 >
                   <span>{ch.name}</span>
                 </div>
               ))
             ) : (
-              <p>Loading channels...</p>
+              <p>No channels available.</p>
             )}
           </>
         )}
@@ -150,6 +164,53 @@ export default function OlivePlayer() {
           alignItems: "center",
         }}
       >
+        {/* Top navigation */}
+        <div style={{ marginBottom: "20px" }}>
+          <button
+            onClick={() => setSection("live")}
+            style={{
+              margin: "0 10px",
+              padding: "10px 20px",
+              background: section === "live" ? "#28a745" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Live TV
+          </button>
+          <button
+            onClick={() => setSection("movies")}
+            style={{
+              margin: "0 10px",
+              padding: "10px 20px",
+              background: section === "movies" ? "#28a745" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Movies
+          </button>
+          <button
+            onClick={() => setSection("tvshows")}
+            style={{
+              margin: "0 10px",
+              padding: "10px 20px",
+              background: section === "tvshows" ? "#28a745" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            TV Shows
+          </button>
+        </div>
+
+        {/* Video player */}
         <div style={{ width: "95%", maxWidth: "1400px", textAlign: "center" }}>
           <video
             ref={playerRef}
