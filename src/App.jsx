@@ -32,7 +32,7 @@ export default function OlivePlayer() {
   const [movies, setMovies] = useState([]);
   const [tvShowsGrouped, setTvShowsGrouped] = useState({});
   const [selectedTvShow, setSelectedTvShow] = useState(null);
-  const [seasonCollapse, setSeasonCollapse] = useState({}); // track collapse state per season
+  const [seasonCollapse, setSeasonCollapse] = useState({}); // collapse per season
 
   const [currentLiveUrl, setCurrentLiveUrl] = useState("");
   const [currentMovieUrl, setCurrentMovieUrl] = useState("");
@@ -91,10 +91,9 @@ export default function OlivePlayer() {
     fetch(PLAYLISTS.tvshows)
       .then((res) => res.text())
       .then((text) => {
-        const parsed = parse(text);
         const grouped = {};
-        parsed.items
-          .filter((i) => i.url)
+        parse(text)
+          .items.filter((i) => i.url)
           .forEach((ch) => {
             const { showName, season, fullName } = parseTvShowName(ch.name);
             if (!grouped[showName]) grouped[showName] = {};
@@ -124,7 +123,6 @@ export default function OlivePlayer() {
     if (liveInstance.current && currentLiveUrl) {
       liveInstance.current.src({ src: currentLiveUrl });
       liveInstance.current.load();
-      liveInstance.current.play().catch(() => {});
     }
   }, [currentLiveUrl]);
 
@@ -132,7 +130,6 @@ export default function OlivePlayer() {
     if (moviesInstance.current && currentMovieUrl) {
       moviesInstance.current.src({ src: currentMovieUrl });
       moviesInstance.current.load();
-      moviesInstance.current.play().catch(() => {});
     }
   }, [currentMovieUrl]);
 
@@ -140,7 +137,6 @@ export default function OlivePlayer() {
     if (tvInstance.current && currentTvUrl) {
       tvInstance.current.src({ src: currentTvUrl });
       tvInstance.current.load();
-      tvInstance.current.play().catch(() => {});
     }
   }, [currentTvUrl]);
 
@@ -152,7 +148,6 @@ export default function OlivePlayer() {
     moviesInstance.current?.pause();
     tvInstance.current?.pause();
 
-    // Reset URLs
     if (newSection === "live" && liveChannels.length) setCurrentLiveUrl(liveChannels[0].url);
     if (newSection === "movies" && movies.length) setCurrentMovieUrl(movies[0].url);
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
@@ -161,7 +156,6 @@ export default function OlivePlayer() {
       const firstSeason = Object.keys(tvShowsGrouped[firstShow])[0];
       setCurrentTvUrl(tvShowsGrouped[firstShow][firstSeason][0].url);
 
-      // Initialize collapse states
       const collapseStates = {};
       Object.keys(tvShowsGrouped[firstShow]).forEach((season) => (collapseStates[season] = true));
       setSeasonCollapse(collapseStates);
@@ -254,7 +248,6 @@ export default function OlivePlayer() {
                     setSelectedTvShow(show);
                     const firstSeason = Object.keys(tvShowsGrouped[show])[0];
                     setCurrentTvUrl(tvShowsGrouped[show][firstSeason][0].url);
-
                     const collapseStates = {};
                     Object.keys(tvShowsGrouped[show]).forEach((season) => (collapseStates[season] = true));
                     setSeasonCollapse(collapseStates);
@@ -322,33 +315,19 @@ export default function OlivePlayer() {
           style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }}
         />
 
-        {/* Play buttons */}
-        <div style={{ marginTop: "10px" }}>
-          {section === "live" && currentLiveUrl && (
-            <button
-              onClick={() => liveInstance.current?.play().catch(() => {})}
-              style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
-            >
-              Play
-            </button>
-          )}
-          {section === "movies" && currentMovieUrl && (
-            <button
-              onClick={() => moviesInstance.current?.play().catch(() => {})}
-              style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
-            >
-              Play
-            </button>
-          )}
-          {section === "tvshows" && currentTvUrl && (
-            <button
-              onClick={() => tvInstance.current?.play().catch(() => {})}
-              style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
-            >
-              Play
-            </button>
-          )}
-        </div>
+        {/* Single dynamic Play button */}
+        {(currentLiveUrl || currentMovieUrl || currentTvUrl) && (
+          <button
+            onClick={() => {
+              if (section === "live") liveInstance.current?.play();
+              if (section === "movies") moviesInstance.current?.play();
+              if (section === "tvshows") tvInstance.current?.play();
+            }}
+            style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer", marginTop: "10px" }}
+          >
+            Play
+          </button>
+        )}
 
         {/* TV Shows episodes with collapsible seasons */}
         {section === "tvshows" && selectedTvShow && (
@@ -357,10 +336,10 @@ export default function OlivePlayer() {
               marginTop: "20px",
               width: "95%",
               maxWidth: "1400px",
+              flex: 1,
               backgroundColor: "rgba(0,0,0,0.6)",
               borderRadius: "8px",
               padding: "10px",
-              maxHeight: "300px",
               overflowY: "auto",
             }}
           >
@@ -395,7 +374,7 @@ export default function OlivePlayer() {
         )}
       </div>
 
-      {/* Sidebar toggle button */}
+      {/* Sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         style={{
