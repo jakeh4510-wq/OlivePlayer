@@ -9,7 +9,7 @@ function OlivePlayer() {
 
   // Example default playlist (replace with your own URL or file)
   const playlistUrl =
-    "https://raw.githubusercontent.com/iptv-org/iptv/refs/heads/master/streams/at_samsung.m3u";
+    "https://raw.githubusercontent.com/iptv-org/iptv/refs/heads/master/streams/ad.m3u";
 
   useEffect(() => {
     // Fetch and parse M3U
