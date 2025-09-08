@@ -36,7 +36,7 @@ export default function OlivePlayer() {
       });
   }, []);
 
-  // Initialize Video.js player and update when channel changes
+  // Initialize Video.js player
   useEffect(() => {
     if (!currentUrl) return;
 
@@ -49,16 +49,7 @@ export default function OlivePlayer() {
 
     player.src({ src: currentUrl, type: "application/x-mpegURL" });
 
-    // Play after changing channel
-    player.ready(() => {
-      try {
-        player.load();
-        player.play();
-      } catch (e) {
-        console.log("Autoplay blocked:", e);
-      }
-    });
-
+    // Trigger resize for proper layout
     const timeout = setTimeout(() => player.trigger("resize"), 300);
 
     return () => {
@@ -97,6 +88,7 @@ export default function OlivePlayer() {
       >
         {sidebarOpen && (
           <>
+            {/* Logo + Title */}
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
@@ -152,11 +144,12 @@ export default function OlivePlayer() {
         style={{
           flex: 1,
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <div style={{ width: "95%", maxWidth: "1400px" }}>
+        <div style={{ width: "95%", maxWidth: "1400px", textAlign: "center" }}>
           <video
             ref={playerRef}
             className="video-js vjs-big-play-centered"
@@ -164,6 +157,29 @@ export default function OlivePlayer() {
             playsInline
             style={{ width: "100%", height: "700px", backgroundColor: "#000" }}
           />
+          {/* Dedicated Play Button */}
+          <button
+            onClick={() => {
+              const player = videojs(playerRef.current);
+              try {
+                player.play();
+              } catch (e) {
+                console.log("Play blocked:", e);
+              }
+            }}
+            style={{
+              marginTop: "10px",
+              padding: "10px 20px",
+              fontSize: "16px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "#28a745",
+              color: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            Play
+          </button>
         </div>
       </div>
 
