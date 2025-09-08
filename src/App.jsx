@@ -1,98 +1,96 @@
-// OlivePlayer.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
-function OlivePlayer() {
-  const [channels, setChannels] = useState([]);
-  const [currentStream, setCurrentStream] = useState("");
+const playlistUrl =
+  "https://raw.githubusercontent.com/iptv-org/iptv/master/tests/test.m3u"; // working test playlist
 
-  // Example default playlist (replace with your own URL or file)
-  const playlistUrl =
-    "https://raw.githubusercontent.com/iptv-org/iptv/refs/heads/master/streams/ad.m3u";
+function parseM3U(data) {
+  const lines = data.split("\n");
+  const items = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("#EXTINF")) {
+      const nameMatch = lines[i].match(/,(.*)$/);
+      const name = nameMatch ? nameMatch[1].trim() : "Unknown";
+      const logoMatch = lines[i].match(/tvg-logo="(.*?)"/);
+      const logo = logoMatch ? logoMatch[1] : "";
+      const url = lines[i + 1] ? lines[i + 1].trim() : "";
+      items.push({ name, logo, url });
+    }
+  }
+  return items;
+}
+
+export default function App() {
+  const [playlist, setPlaylist] = useState([]);
+  const [currentUrl, setCurrentUrl] = useState("");
+  const playerRef = useRef(null);
 
   useEffect(() => {
-    // Fetch and parse M3U
     fetch(playlistUrl)
       .then((res) => res.text())
-      .then((data) => {
-        const parsed = parseM3U(data);
-        setChannels(parsed);
-        if (parsed.length > 0) {
-          setCurrentStream(parsed[0].url);
-        }
+      .then((text) => {
+        const items = parseM3U(text);
+        setPlaylist(items);
+        if (items.length > 0) setCurrentUrl(items[0].url);
       });
   }, []);
 
-  // Parse M3U file
-  function parseM3U(m3uText) {
-    const lines = m3uText.split("\n");
-    const result = [];
-    let current = {};
-    lines.forEach((line) => {
-      if (line.startsWith("#EXTINF")) {
-        const nameMatch = line.match(/,(.*)$/);
-        const logoMatch = line.match(/tvg-logo="(.*?)"/);
-        current = {
-          name: nameMatch ? nameMatch[1] : "Unknown",
-          logo: logoMatch ? logoMatch[1] : "",
-        };
-      } else if (line.startsWith("http")) {
-        current.url = line.trim();
-        result.push(current);
-      }
-    });
-    return result;
-  }
-
-  // Initialize Video.js player
   useEffect(() => {
-    if (currentStream) {
-      const player = videojs("olive-video", {
-        autoplay: false,
-        controls: true,
-        preload: "auto",
-        fluid: true,
-        sources: [{ src: currentStream, type: "application/x-mpegURL" }],
-      });
-      return () => {
-        player.dispose();
-      };
+    if (!playerRef.current) return;
+    const player = videojs(playerRef.current);
+    if (currentUrl) {
+      player.src({ src: currentUrl, type: "application/x-mpegURL" });
+      player.play().catch(() => {});
     }
-  }, [currentStream]);
+    return () => {
+      player.dispose();
+    };
+  }, [currentUrl]);
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      {/* Sidebar for channels */}
-      <div className="w-1/4 overflow-y-scroll border-r border-gray-700 p-2">
-        <h2 className="text-xl mb-4 font-bold">OlivePlayer</h2>
-        {channels.map((ch, idx) => (
+    <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
+      <div
+        style={{
+          width: "250px",
+          background: "#222",
+          color: "#fff",
+          overflowY: "auto",
+          padding: "10px",
+        }}
+      >
+        <h2 style={{ textAlign: "center" }}>OlivePlayer</h2>
+        {playlist.map((item, idx) => (
           <div
             key={idx}
-            className="flex items-center mb-2 cursor-pointer hover:bg-gray-700 p-2 rounded"
-            onClick={() => setCurrentStream(ch.url)}
+            onClick={() => setCurrentUrl(item.url)}
+            style={{
+              cursor: "pointer",
+              marginBottom: "10px",
+              padding: "5px",
+              background: "#333",
+              borderRadius: "5px",
+            }}
           >
-            {ch.logo && (
+            {item.logo && (
               <img
-                src={ch.logo}
-                alt={ch.name}
-                className="w-8 h-8 mr-2 rounded"
+                src={item.logo}
+                alt={item.name}
+                style={{ width: "40px", verticalAlign: "middle", marginRight: "5px" }}
               />
             )}
-            <span>{ch.name}</span>
+            <span>{item.name}</span>
           </div>
         ))}
       </div>
-
-      {/* Video Player */}
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div style={{ flex: 1, background: "#000" }}>
         <video
-          id="olive-video"
-          className="video-js vjs-big-play-centered w-full h-full"
+          ref={playerRef}
+          className="video-js vjs-default-skin"
+          controls
+          style={{ width: "100%", height: "100%" }}
         ></video>
       </div>
     </div>
   );
 }
-
-export default OlivePlayer;
