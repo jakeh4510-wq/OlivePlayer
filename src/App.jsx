@@ -110,9 +110,12 @@ export default function OlivePlayer() {
 
   // Initialize players
   useEffect(() => {
-    if (!liveInstance.current && livePlayerRef.current) liveInstance.current = videojs(livePlayerRef.current, { controls: true, fluid: true });
-    if (!moviesInstance.current && moviesPlayerRef.current) moviesInstance.current = videojs(moviesPlayerRef.current, { controls: true, fluid: true });
-    if (!tvInstance.current && tvPlayerRef.current) tvInstance.current = videojs(tvPlayerRef.current, { controls: true, fluid: true });
+    if (!liveInstance.current && livePlayerRef.current)
+      liveInstance.current = videojs(livePlayerRef.current, { controls: true, fluid: true });
+    if (!moviesInstance.current && moviesPlayerRef.current)
+      moviesInstance.current = videojs(moviesPlayerRef.current, { controls: true, fluid: true });
+    if (!tvInstance.current && tvPlayerRef.current)
+      tvInstance.current = videojs(tvPlayerRef.current, { controls: true, fluid: true });
   }, []);
 
   // Update player sources and autoplay
@@ -139,6 +142,25 @@ export default function OlivePlayer() {
       tvInstance.current.play().catch((e) => console.log("Play blocked", e));
     }
   }, [currentTvUrl]);
+
+  const handleSectionChange = (newSection) => {
+    setSection(newSection);
+
+    // Pause all players
+    liveInstance.current?.pause();
+    moviesInstance.current?.pause();
+    tvInstance.current?.pause();
+
+    // Reset URLs for new section
+    if (newSection === "live" && liveChannels.length) setCurrentLiveUrl(liveChannels[0].url);
+    if (newSection === "movies" && movies.length) setCurrentMovieUrl(movies[0].url);
+    if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
+      const firstShow = Object.keys(tvShowsGrouped)[0];
+      setSelectedTvShow(firstShow);
+      const firstSeason = Object.keys(tvShowsGrouped[firstShow])[0];
+      setCurrentTvUrl(tvShowsGrouped[firstShow][firstSeason][0].url);
+    }
+  };
 
   return (
     <div
@@ -244,19 +266,19 @@ export default function OlivePlayer() {
         {/* Section buttons */}
         <div style={{ marginBottom: "20px" }}>
           <button
-            onClick={() => setSection("live")}
+            onClick={() => handleSectionChange("live")}
             style={{ margin: "0 10px", padding: "10px 20px", background: section === "live" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
           >
             Live TV
           </button>
           <button
-            onClick={() => setSection("movies")}
+            onClick={() => handleSectionChange("movies")}
             style={{ margin: "0 10px", padding: "10px 20px", background: section === "movies" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
           >
             Movies
           </button>
           <button
-            onClick={() => setSection("tvshows")}
+            onClick={() => handleSectionChange("tvshows")}
             style={{ margin: "0 10px", padding: "10px 20px", background: section === "tvshows" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
           >
             TV Shows
