@@ -26,17 +26,18 @@ export default function OlivePlayer() {
   const tvInstance = useRef(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [section, setSection] = useState("live"); // live, movies, tvshows
+  const [section, setSection] = useState("live");
 
   const [liveChannels, setLiveChannels] = useState([]);
   const [movies, setMovies] = useState([]);
   const [tvShowsGrouped, setTvShowsGrouped] = useState({});
   const [selectedTvShow, setSelectedTvShow] = useState(null);
+
   const [currentLiveUrl, setCurrentLiveUrl] = useState("");
   const [currentMovieUrl, setCurrentMovieUrl] = useState("");
   const [currentTvUrl, setCurrentTvUrl] = useState("");
 
-  // Utility to extract show name, season, episode
+  // Parse TV show names into show/season/episode
   const parseTvShowName = (name) => {
     const match = name.match(/^(.*?)\s*(\(\d{4}\))?\s*S(\d+)E(\d+)/i);
     if (match) {
@@ -107,33 +108,35 @@ export default function OlivePlayer() {
       });
   }, []);
 
-  // Initialize all three players
+  // Initialize players
   useEffect(() => {
-    if (!liveInstance.current && livePlayerRef.current)
-      liveInstance.current = videojs(livePlayerRef.current, { controls: true, fluid: true });
-    if (!moviesInstance.current && moviesPlayerRef.current)
-      moviesInstance.current = videojs(moviesPlayerRef.current, { controls: true, fluid: true });
-    if (!tvInstance.current && tvPlayerRef.current)
-      tvInstance.current = videojs(tvPlayerRef.current, { controls: true, fluid: true });
+    if (!liveInstance.current && livePlayerRef.current) liveInstance.current = videojs(livePlayerRef.current, { controls: true, fluid: true });
+    if (!moviesInstance.current && moviesPlayerRef.current) moviesInstance.current = videojs(moviesPlayerRef.current, { controls: true, fluid: true });
+    if (!tvInstance.current && tvPlayerRef.current) tvInstance.current = videojs(tvPlayerRef.current, { controls: true, fluid: true });
   }, []);
 
-  // Update sources
+  // Update player sources and autoplay
   useEffect(() => {
     if (liveInstance.current && currentLiveUrl) {
       liveInstance.current.src({ src: currentLiveUrl });
       liveInstance.current.load();
+      liveInstance.current.play().catch((e) => console.log("Play blocked", e));
     }
   }, [currentLiveUrl]);
+
   useEffect(() => {
     if (moviesInstance.current && currentMovieUrl) {
       moviesInstance.current.src({ src: currentMovieUrl });
       moviesInstance.current.load();
+      moviesInstance.current.play().catch((e) => console.log("Play blocked", e));
     }
   }, [currentMovieUrl]);
+
   useEffect(() => {
     if (tvInstance.current && currentTvUrl) {
       tvInstance.current.src({ src: currentTvUrl });
       tvInstance.current.load();
+      tvInstance.current.play().catch((e) => console.log("Play blocked", e));
     }
   }, [currentTvUrl]);
 
@@ -282,6 +285,34 @@ export default function OlivePlayer() {
           playsInline
           style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }}
         />
+
+        {/* Play buttons per section */}
+        <div style={{ marginTop: "10px" }}>
+          {section === "live" && currentLiveUrl && (
+            <button
+              onClick={() => liveInstance.current?.play().catch((e) => console.log("Play blocked", e))}
+              style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
+            >
+              Play
+            </button>
+          )}
+          {section === "movies" && currentMovieUrl && (
+            <button
+              onClick={() => moviesInstance.current?.play().catch((e) => console.log("Play blocked", e))}
+              style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
+            >
+              Play
+            </button>
+          )}
+          {section === "tvshows" && currentTvUrl && (
+            <button
+              onClick={() => tvInstance.current?.play().catch((e) => console.log("Play blocked", e))}
+              style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer" }}
+            >
+              Play
+            </button>
+          )}
+        </div>
 
         {/* TV Shows episodes */}
         {section === "tvshows" && selectedTvShow && (
