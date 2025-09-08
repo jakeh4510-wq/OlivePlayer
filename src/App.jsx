@@ -5,6 +5,9 @@ import "video.js/dist/video-js.css";
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
+const BACKGROUND_GIF =
+  "https://i.gifer.com/ZZ5H.gif"; // Replace with any smooth dark looping GIF you like
+
 const channels = [
   {
     name: "Big Buck Bunny HLS",
@@ -37,7 +40,7 @@ export default function OlivePlayer() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUrl, setCurrentUrl] = useState(channels[0].url);
 
-  // Video.js initialization
+  // Initialize Video.js
   useEffect(() => {
     const player = videojs(playerRef.current, {
       autoplay: false,
@@ -59,21 +62,35 @@ export default function OlivePlayer() {
   }, [currentUrl]);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#000" }}>
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        width: "100vw",
+        backgroundImage: `url(${BACKGROUND_GIF})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "repeat",
+      }}
+    >
       {/* Sidebar */}
       <div
         style={{
-          width: sidebarOpen ? "220px" : "0px",
+          width: sidebarOpen ? "240px" : "0px",
           transition: "width 0.3s",
-          backgroundColor: "#1a1a1a",
+          backgroundColor: "rgba(26, 26, 26, 0.95)",
           color: "#fff",
           overflowX: "hidden",
           flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: sidebarOpen ? "20px" : "0px",
         }}
       >
         {sidebarOpen && (
-          <div style={{ padding: "15px", textAlign: "center" }}>
-            {/* Olive logo + app title in sidebar */}
+          <>
+            {/* Logo and title */}
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
@@ -103,6 +120,7 @@ export default function OlivePlayer() {
                   borderRadius: "6px",
                   display: "flex",
                   alignItems: "center",
+                  width: "100%",
                   transition: "background-color 0.2s",
                 }}
               >
@@ -117,8 +135,26 @@ export default function OlivePlayer() {
                 <span>{ch.name}</span>
               </div>
             ))}
-          </div>
+          </>
         )}
+
+        {/* Sidebar toggle button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            marginTop: "auto",
+            padding: "8px 12px",
+            backgroundColor: "#333",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            width: sidebarOpen ? "100%" : "40px",
+            transition: "width 0.3s",
+          }}
+        >
+          {sidebarOpen ? "Hide Sidebar" : "☰"}
+        </button>
       </div>
 
       {/* Main content */}
@@ -128,38 +164,15 @@ export default function OlivePlayer() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          position: "relative",
         }}
       >
-        {/* Show sidebar toggle button when hidden */}
-        {!sidebarOpen && (
-          <button
-            onClick={() => setSidebarOpen(true)}
-            style={{
-              position: "absolute",
-              left: "10px",
-              top: "10px",
-              zIndex: 10,
-              padding: "8px 12px",
-              backgroundColor: "#333",
-              color: "#fff",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-            }}
-          >
-            Show Sidebar
-          </button>
-        )}
-
-        {/* Video Player (centered) */}
-        <div style={{ width: "90%", maxWidth: "1000px" }}>
+        <div style={{ width: "95%", maxWidth: "1200px" }}>
           <video
             ref={playerRef}
             className="video-js vjs-big-play-centered"
             controls
             playsInline
-            style={{ width: "100%", height: "500px", backgroundColor: "#000" }}
+            style={{ width: "100%", height: "700px", backgroundColor: "#000" }}
           />
         </div>
       </div>
