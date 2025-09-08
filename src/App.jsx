@@ -6,7 +6,7 @@ const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
 const BACKGROUND_GIF =
-  "https://wallpaperaccess.com/full/869923.gif";
+  "https://wallpaperaccess.com/full/8088685.gif";
 
 const channels = [
   {
