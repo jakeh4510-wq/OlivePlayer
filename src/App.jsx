@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
-import { Parser } from "m3u8-parser";
+import { parse } from "iptv-playlist-parser";
 
 const OLIVE_LOGO =
   "https://th.bing.com/th/id/R.3e964212a23eecd1e4c0ba43faece4d7?rik=woa0mnDdtNck5A&riu=http%3a%2f%2fcliparts.co%2fcliparts%2f5cR%2fezE%2f5cRezExni.png&ehk=ATHoTK2nkPsJzRy7%2b8AnWq%2f5gEqvwgzBW3GRbMjId4E%3d&risl=&pid=ImgRaw&r=0";
 
 const BACKGROUND_GIF =
-  "https://wallpaperaccess.com/full/8088685.gif";
+  "https://wallpaperaccess.com/full/869923.gif";
 
 export default function OlivePlayer() {
   const playerRef = useRef(null);
@@ -15,38 +15,26 @@ export default function OlivePlayer() {
   const [channels, setChannels] = useState([]);
   const [currentUrl, setCurrentUrl] = useState("");
 
-  // Fetch and parse M3U playlist
+  // Fetch and parse IPTV M3U playlist
   useEffect(() => {
     fetch("https://iptv-org.github.io/iptv/index.m3u")
       .then((res) => res.text())
       .then((text) => {
-        const parser = new Parser();
-        parser.push(text);
-        parser.end();
-
-        let parsedChannels = [];
-
-        // Parse segments or playlists
-        if (parser.manifest.segments?.length) {
-          parsedChannels = parser.manifest.segments.map((seg, idx) => ({
-            name: seg.title || seg.attributes?.["tvg-name"] || `Channel ${idx + 1}`,
-            url: seg.uri,
+        const parsed = parse(text);
+        const parsedChannels = parsed.items
+          .filter((item) => item.url) // ignore empty URLs
+          .map((item) => ({
+            name: item.name || "Unknown Channel",
+            url: item.url,
             type: "application/x-mpegURL",
           }));
-        } else if (parser.manifest.playlists?.length) {
-          parsedChannels = parser.manifest.playlists.map((pl, idx) => ({
-            name: pl.attributes?.title || pl.attributes?.["tvg-name"] || `Channel ${idx + 1}`,
-            url: pl.uri,
-            type: "application/x-mpegURL",
-          }));
-        }
 
         setChannels(parsedChannels);
         if (parsedChannels.length) setCurrentUrl(parsedChannels[0].url);
       });
   }, []);
 
-  // Initialize Video.js player
+  // Initialize Video.js player and update when channel changes
   useEffect(() => {
     if (!currentUrl) return;
 
@@ -59,9 +47,10 @@ export default function OlivePlayer() {
 
     player.src({ src: currentUrl, type: "application/x-mpegURL" });
 
-    // Attempt to autoplay when switching channels
+    // Attempt to autoplay
     player.ready(() => {
       try {
+        player.load();
         player.play();
       } catch (e) {
         console.log("Autoplay blocked:", e);
@@ -110,7 +99,12 @@ export default function OlivePlayer() {
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
-              style={{ width: "120px", height: "120px", borderRadius: "50%", marginBottom: "10px" }}
+              style={{
+                width: "120px",
+                height: "120px",
+                borderRadius: "50%",
+                marginBottom: "10px",
+              }}
             />
             <h1
               style={{
@@ -133,7 +127,8 @@ export default function OlivePlayer() {
                     cursor: "pointer",
                     padding: "10px",
                     marginBottom: "10px",
-                    backgroundColor: currentUrl === ch.url ? "#555" : "#333",
+                    backgroundColor:
+                      currentUrl === ch.url ? "#555" : "#333",
                     borderRadius: "6px",
                     display: "flex",
                     alignItems: "center",
