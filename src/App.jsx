@@ -32,7 +32,7 @@ export default function OlivePlayer() {
   const [movies, setMovies] = useState([]);
   const [tvShowsGrouped, setTvShowsGrouped] = useState({});
   const [selectedTvShow, setSelectedTvShow] = useState(null);
-  const [seasonCollapse, setSeasonCollapse] = useState({}); // collapse per season
+  const [seasonCollapse, setSeasonCollapse] = useState({});
 
   const [currentLiveUrl, setCurrentLiveUrl] = useState("");
   const [currentMovieUrl, setCurrentMovieUrl] = useState("");
@@ -226,7 +226,11 @@ export default function OlivePlayer() {
               movies.map((mv, i) => (
                 <div
                   key={i}
-                  onClick={() => setCurrentMovieUrl(mv.url)}
+                  onClick={() => {
+                    setCurrentMovieUrl(mv.url);
+                    moviesInstance.current?.load();
+                    moviesInstance.current?.play();
+                  }}
                   style={{
                     cursor: "pointer",
                     padding: "10px",
@@ -337,29 +341,41 @@ export default function OlivePlayer() {
               width: "95%",
               maxWidth: "1400px",
               flex: 1,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              borderRadius: "8px",
-              padding: "10px",
               overflowY: "auto",
+              maxHeight: "300px",
+              padding: "10px",
+              backgroundColor: "rgba(0,0,0,0.6)",
+              borderRadius: "6px",
             }}
           >
             {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
               <div key={season} style={{ marginBottom: "10px" }}>
-                <h3
-                  style={{ color: "#fff", cursor: "pointer" }}
+                <div
                   onClick={() => toggleSeason(season)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "8px",
+                    backgroundColor: "#444",
+                    color: "#fff",
+                    borderRadius: "4px",
+                  }}
                 >
-                  {season} {seasonCollapse[season] ? "▼" : "▲"}
-                </h3>
+                  {season} {seasonCollapse[season] ? "▼" : "▶"}
+                </div>
                 {!seasonCollapse[season] &&
                   tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
                     <div
                       key={idx}
-                      onClick={() => setCurrentTvUrl(ep.url)}
+                      onClick={() => {
+                        setCurrentTvUrl(ep.url);
+                        tvInstance.current?.load();
+                        tvInstance.current?.play();
+                      }}
                       style={{
                         cursor: "pointer",
                         padding: "6px",
-                        marginBottom: "4px",
+                        marginLeft: "10px",
+                        marginTop: "2px",
                         borderRadius: "4px",
                         color: "#fff",
                         backgroundColor: currentTvUrl === ep.url ? "#555" : "#222",
