@@ -2,94 +2,80 @@ import React, { useState, useEffect, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
-const playlistUrl =
-  "https://raw.githubusercontent.com/iptv-org/iptv/master/tests/test.m3u"; // working test playlist
-
-function parseM3U(data) {
-  const lines = data.split("\n");
-  const items = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].startsWith("#EXTINF")) {
-      const nameMatch = lines[i].match(/,(.*)$/);
-      const name = nameMatch ? nameMatch[1].trim() : "Unknown";
-      const logoMatch = lines[i].match(/tvg-logo="(.*?)"/);
-      const logo = logoMatch ? logoMatch[1] : "";
-      const url = lines[i + 1] ? lines[i + 1].trim() : "";
-      items.push({ name, logo, url });
-    }
-  }
-  return items;
-}
-
 export default function App() {
-  const [playlist, setPlaylist] = useState([]);
-  const [currentUrl, setCurrentUrl] = useState("");
   const playerRef = useRef(null);
+  const [currentUrl, setCurrentUrl] = useState(
+    "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+  );
+
+  const channels = [
+    { name: "Big Buck Bunny", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+    { name: "Sintel", url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8" },
+    { name: "Tears of Steel", url: "https://bitdash-a.akamaihd.net/content/tears-of-steel/tears-of-steel.m3u8" }
+  ];
 
   useEffect(() => {
-    fetch(playlistUrl)
-      .then((res) => res.text())
-      .then((text) => {
-        const items = parseM3U(text);
-        setPlaylist(items);
-        if (items.length > 0) setCurrentUrl(items[0].url);
-      });
-  }, []);
+    // initialize Video.js once
+    const player = videojs(playerRef.current, {
+      autoplay: false,
+      controls: true,
+      responsive: true,
+      fluid: true
+    });
 
-  useEffect(() => {
-    if (!playerRef.current) return;
-    const player = videojs(playerRef.current);
-    if (currentUrl) {
-      player.src({ src: currentUrl, type: "application/x-mpegURL" });
-      player.play().catch(() => {});
-    }
+    // Update source when currentUrl changes
+    player.src({ src: currentUrl, type: "application/x-mpegURL" });
+    player.play().catch(() => {});
+
     return () => {
       player.dispose();
     };
-  }, [currentUrl]);
+  }, []); // initialize only once
+
+  useEffect(() => {
+    if (playerRef.current && currentUrl) {
+      const player = videojs(playerRef.current);
+      player.src({ src: currentUrl, type: "application/x-mpegURL" });
+      player.play().catch(() => {});
+    }
+  }, [currentUrl]); // update source on change
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
+    <div style={{ display: "flex", height: "100vh", margin: 0, padding: 0 }}>
       <div
         style={{
           width: "250px",
-          background: "#222",
+          backgroundColor: "#1a1a1a",
           color: "#fff",
-          overflowY: "auto",
           padding: "10px",
+          boxSizing: "border-box",
+          overflowY: "auto"
         }}
       >
         <h2 style={{ textAlign: "center" }}>OlivePlayer</h2>
-        {playlist.map((item, idx) => (
+        {channels.map((ch, idx) => (
           <div
             key={idx}
-            onClick={() => setCurrentUrl(item.url)}
+            onClick={() => setCurrentUrl(ch.url)}
             style={{
               cursor: "pointer",
+              padding: "10px",
               marginBottom: "10px",
-              padding: "5px",
-              background: "#333",
-              borderRadius: "5px",
+              backgroundColor: "#333",
+              borderRadius: "6px"
             }}
           >
-            {item.logo && (
-              <img
-                src={item.logo}
-                alt={item.name}
-                style={{ width: "40px", verticalAlign: "middle", marginRight: "5px" }}
-              />
-            )}
-            <span>{item.name}</span>
+            {ch.name}
           </div>
         ))}
       </div>
-      <div style={{ flex: 1, background: "#000" }}>
+      <div style={{ flex: 1, backgroundColor: "#000", display: "flex", justifyContent: "center", alignItems: "center" }}>
         <video
           ref={playerRef}
-          className="video-js vjs-default-skin"
+          className="video-js vjs-big-play-centered"
           controls
-          style={{ width: "100%", height: "100%" }}
-        ></video>
+          style={{ width: "90%", height: "90%", maxHeight: "90vh", maxWidth: "100%" }}
+        />
       </div>
     </div>
   );
