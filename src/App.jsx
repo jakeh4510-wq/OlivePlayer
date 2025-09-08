@@ -129,6 +129,7 @@ export default function OlivePlayer() {
   useEffect(() => {
     if (moviesInstance.current && currentMovieUrl) {
       moviesInstance.current.src({ src: currentMovieUrl });
+      moviesInstance.current.poster(""); // reset UI for big play button
       moviesInstance.current.load();
     }
   }, [currentMovieUrl]);
@@ -136,6 +137,7 @@ export default function OlivePlayer() {
   useEffect(() => {
     if (tvInstance.current && currentTvUrl) {
       tvInstance.current.src({ src: currentTvUrl });
+      tvInstance.current.poster(""); // reset UI for big play button
       tvInstance.current.load();
     }
   }, [currentTvUrl]);
@@ -226,11 +228,7 @@ export default function OlivePlayer() {
               movies.map((mv, i) => (
                 <div
                   key={i}
-                  onClick={() => {
-                    setCurrentMovieUrl(mv.url);
-                    moviesInstance.current?.load();
-                    moviesInstance.current?.play();
-                  }}
+                  onClick={() => setCurrentMovieUrl(mv.url)}
                   style={{
                     cursor: "pointer",
                     padding: "10px",
@@ -319,21 +317,26 @@ export default function OlivePlayer() {
           style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }}
         />
 
-        {/* Single dynamic Play button */}
-        {(currentLiveUrl || currentMovieUrl || currentTvUrl) && (
-          <button
-            onClick={() => {
-              if (section === "live") liveInstance.current?.play();
-              if (section === "movies") moviesInstance.current?.play();
-              if (section === "tvshows") tvInstance.current?.play();
-            }}
-            style={{ padding: "10px 20px", fontSize: "16px", borderRadius: "6px", border: "none", backgroundColor: "#28a745", color: "#fff", cursor: "pointer", marginTop: "10px" }}
-          >
-            Play
-          </button>
-        )}
+        {/* Sidebar toggle */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            position: "absolute",
+            top: "20px",
+            left: sidebarOpen ? "260px" : "20px",
+            padding: "8px 12px",
+            backgroundColor: "#333",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            zIndex: 1000,
+          }}
+        >
+          {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
+        </button>
 
-        {/* TV Shows episodes with collapsible seasons */}
+        {/* TV Shows episodes */}
         {section === "tvshows" && selectedTvShow && (
           <div
             style={{
@@ -366,11 +369,7 @@ export default function OlivePlayer() {
                   tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
                     <div
                       key={idx}
-                      onClick={() => {
-                        setCurrentTvUrl(ep.url);
-                        tvInstance.current?.load();
-                        tvInstance.current?.play();
-                      }}
+                      onClick={() => setCurrentTvUrl(ep.url)}
                       style={{
                         cursor: "pointer",
                         padding: "6px",
@@ -389,25 +388,6 @@ export default function OlivePlayer() {
           </div>
         )}
       </div>
-
-      {/* Sidebar toggle */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: sidebarOpen ? "260px" : "20px",
-          padding: "8px 12px",
-          backgroundColor: "#333",
-          color: "#fff",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          zIndex: 1000,
-        }}
-      >
-        {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
-      </button>
     </div>
   );
 }
