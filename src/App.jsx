@@ -10,10 +10,10 @@ const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
 const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
+  movies:
+    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/action-movies.m3u",
   tvshows:
     "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
-  movies:
-    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/action-movies.m3u", // fixed M3U
 };
 
 export default function OlivePlayer() {
@@ -38,7 +38,6 @@ export default function OlivePlayer() {
   const [currentMovieUrl, setCurrentMovieUrl] = useState("");
   const [currentTvUrl, setCurrentTvUrl] = useState("");
 
-  // Parse TV show names
   const parseTvShowName = (name) => {
     const match = name.match(/^(.*?)\s*(?:\(\d{4}\))?\s*S(\d+)E(\d+)/i);
     if (match) {
@@ -52,7 +51,6 @@ export default function OlivePlayer() {
     return { showName: name, season: "S01", episode: "", fullName: name };
   };
 
-  // Fetch playlists
   useEffect(() => {
     const loadPlaylist = async (url, setter, firstUrlSetter, forceM3U = false) => {
       const res = await fetch(url);
@@ -69,13 +67,10 @@ export default function OlivePlayer() {
       if (list.length) firstUrlSetter(list[0].url);
     };
 
-    // Live channels (auto-detect type)
     loadPlaylist(PLAYLISTS.live, setLiveChannels, setCurrentLiveUrl);
-
-    // Movies (force M3U / MP4)
     loadPlaylist(PLAYLISTS.movies, setMovies, setCurrentMovieUrl, true);
 
-    // TV Shows (auto-detect type)
+    // TV Shows
     fetch(PLAYLISTS.tvshows)
       .then((res) => res.text())
       .then((text) => {
@@ -106,7 +101,6 @@ export default function OlivePlayer() {
       });
   }, []);
 
-  // Initialize Video.js
   useEffect(() => {
     if (liveRef.current && !livePlayer.current) livePlayer.current = videojs(liveRef.current, { controls: true, fluid: true });
     if (moviesRef.current && !moviesPlayer.current) moviesPlayer.current = videojs(moviesRef.current, { controls: true, fluid: true });
@@ -117,6 +111,7 @@ export default function OlivePlayer() {
     if (!player) return;
     player.pause();
     player.src({ src: url, type });
+    player.poster("");
     player.load();
   };
 
@@ -126,10 +121,13 @@ export default function OlivePlayer() {
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
+
+    // Pause all players
     livePlayer.current?.pause();
     moviesPlayer.current?.pause();
     tvPlayer.current?.pause();
 
+    // Initialize first video in that section
     if (newSection === "live" && liveChannels.length) setCurrentLiveUrl(liveChannels[0].url);
     if (newSection === "movies" && movies.length) setCurrentMovieUrl(movies[0].url);
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
@@ -165,7 +163,7 @@ export default function OlivePlayer() {
                 const firstSeason = Object.keys(tvShowsGrouped[show])[0];
                 setCurrentTvUrl(tvShowsGrouped[show][firstSeason][0].url);
                 const collapseStates = {};
-                Object.keys(tvShowsGrouped[show]).forEach((s) => (collapseStates[s] = true));
+                Object.keys(tvShowsGrouped[show]).forEach((season) => (collapseStates[season] = true));
                 setSeasonCollapse(collapseStates);
               }} style={{ cursor: "pointer", padding: "10px", marginBottom: "10px", borderRadius: "6px", width: "100%", backgroundColor: selectedTvShow === show ? "#555" : "#333" }}>{show}</div>
             ))}
@@ -181,14 +179,12 @@ export default function OlivePlayer() {
           <button onClick={() => handleSectionChange("tvshows")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "tvshows" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>TV Shows</button>
         </div>
 
-        {/* Video players */}
-        <video ref={liveRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "live" ? "block" : "none" }} />
-        <video ref={moviesRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "movies" ? "block" : "none" }} />
-        <video ref={tvRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }} />
+        <video ref={liveRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", display: section === "live" ? "block" : "none" }} />
+        <video ref={moviesRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", display: section === "movies" ? "block" : "none" }} />
+        <video ref={tvRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", display: section === "tvshows" ? "block" : "none" }} />
 
-        {/* TV show episodes */}
         {section === "tvshows" && selectedTvShow && (
-          <div style={{ marginTop: "20px", maxHeight: "400px", overflowY: "auto", width: "95%", backgroundColor: "rgba(26,26,26,0.8)", padding: "10px", borderRadius: "8px", color: "#fff" }}>
+          <div style={{ marginTop: "20px", maxHeight: "300px", overflowY: "auto", width: "95%", backgroundColor: "rgba(26,26,26,0.8)", padding: "10px", borderRadius: "8px", color: "#fff" }}>
             {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
               <div key={season}>
                 <div onClick={() => toggleSeason(season)} style={{ cursor: "pointer", padding: "6px", backgroundColor: "#444", marginTop: "5px", borderRadius: "4px" }}>{season}</div>
