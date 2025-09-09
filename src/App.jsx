@@ -13,14 +13,7 @@ const PLAYLISTS = {
   tvshows:
     "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
   movies:
-    "https://gist.githubusercontent.com/cirrusUK/f2ec33786c4820e4b4ac4670b2a8afea/raw/320031be25bb03b3b1d5fac9f93b19c82a7e9cef/imdb250.m3u",
-};
-
-// Detect media type based on URL
-const getMediaType = (url) => {
-  if (url.endsWith(".m3u8")) return "application/x-mpegURL";
-  if (url.endsWith(".mp4")) return "video/mp4";
-  return "video/mp4"; // fallback
+    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/action-movies.m3u", // fixed M3U
 };
 
 export default function OlivePlayer() {
@@ -59,9 +52,9 @@ export default function OlivePlayer() {
     return { showName: name, season: "S01", episode: "", fullName: name };
   };
 
-  // Fetch all playlists
+  // Fetch playlists
   useEffect(() => {
-    const loadPlaylist = async (url, setter, firstUrlSetter) => {
+    const loadPlaylist = async (url, setter, firstUrlSetter, forceM3U = false) => {
       const res = await fetch(url);
       const text = await res.text();
       const parsed = parse(text);
@@ -70,16 +63,19 @@ export default function OlivePlayer() {
         .map((ch) => ({
           name: ch.name || "Unknown",
           url: encodeURI(ch.url),
-          type: getMediaType(ch.url),
+          type: forceM3U ? "video/mp4" : ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
         }));
       setter(list);
       if (list.length) firstUrlSetter(list[0].url);
     };
 
+    // Live channels (auto-detect type)
     loadPlaylist(PLAYLISTS.live, setLiveChannels, setCurrentLiveUrl);
-    loadPlaylist(PLAYLISTS.movies, setMovies, setCurrentMovieUrl);
 
-    // TV Shows with grouping
+    // Movies (force M3U / MP4)
+    loadPlaylist(PLAYLISTS.movies, setMovies, setCurrentMovieUrl, true);
+
+    // TV Shows (auto-detect type)
     fetch(PLAYLISTS.tvshows)
       .then((res) => res.text())
       .then((text) => {
@@ -93,12 +89,11 @@ export default function OlivePlayer() {
             grouped[showName][season].push({
               name: fullName,
               url: encodeURI(ch.url),
-              type: getMediaType(ch.url),
+              type: ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
             });
           });
         setTvShowsGrouped(grouped);
 
-        // Select first show
         const firstShow = Object.keys(grouped)[0];
         if (firstShow) {
           setSelectedTvShow(firstShow);
@@ -125,9 +120,9 @@ export default function OlivePlayer() {
     player.load();
   };
 
-  useEffect(() => updatePlayer(livePlayer.current, currentLiveUrl, getMediaType(currentLiveUrl)), [currentLiveUrl]);
-  useEffect(() => updatePlayer(moviesPlayer.current, currentMovieUrl, getMediaType(currentMovieUrl)), [currentMovieUrl]);
-  useEffect(() => updatePlayer(tvPlayer.current, currentTvUrl, getMediaType(currentTvUrl)), [currentTvUrl]);
+  useEffect(() => updatePlayer(livePlayer.current, currentLiveUrl, currentLiveUrl.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4"), [currentLiveUrl]);
+  useEffect(() => updatePlayer(moviesPlayer.current, currentMovieUrl, "video/mp4"), [currentMovieUrl]);
+  useEffect(() => updatePlayer(tvPlayer.current, currentTvUrl, currentTvUrl.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4"), [currentTvUrl]);
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
@@ -170,7 +165,7 @@ export default function OlivePlayer() {
                 const firstSeason = Object.keys(tvShowsGrouped[show])[0];
                 setCurrentTvUrl(tvShowsGrouped[show][firstSeason][0].url);
                 const collapseStates = {};
-                Object.keys(tvShowsGrouped[show]).forEach((s) => collapseStates[s] = true);
+                Object.keys(tvShowsGrouped[show]).forEach((s) => (collapseStates[s] = true));
                 setSeasonCollapse(collapseStates);
               }} style={{ cursor: "pointer", padding: "10px", marginBottom: "10px", borderRadius: "6px", width: "100%", backgroundColor: selectedTvShow === show ? "#555" : "#333" }}>{show}</div>
             ))}
@@ -178,7 +173,7 @@ export default function OlivePlayer() {
         )}
       </div>
 
-      {/* Main */}
+      {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px" }}>
         <div style={{ marginBottom: "20px" }}>
           <button onClick={() => handleSectionChange("live")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "live" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>Live TV</button>
@@ -186,6 +181,7 @@ export default function OlivePlayer() {
           <button onClick={() => handleSectionChange("tvshows")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "tvshows" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>TV Shows</button>
         </div>
 
+        {/* Video players */}
         <video ref={liveRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "live" ? "block" : "none" }} />
         <video ref={moviesRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "movies" ? "block" : "none" }} />
         <video ref={tvRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000", display: section === "tvshows" ? "block" : "none" }} />
