@@ -8,16 +8,6 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-const MOVIES_M3U = `
-#EXTM3U
-#EXTINF:0,12 Years a Slave (2013)
-http://103.121.39.254/media/disk4/IMDb Top 250 Movies/12 Years a Slave (2013) [1080p]/12.Years.a.Slave.2013.1080p.BluRay.x264.YIFY.mp4
-#EXTINF:0,12 Angry Men (1957)
-http://103.121.39.254/media/disk4/IMDb Top 250 Movies/12.Angry.Men.1957.1080p.BluRay.H264.AAC [DDN]/12.Angry.Men.1957.1080p.BluRay.H264.AAC [DDN].mp4
-#EXTINF:0,2001: A Space Odyssey (1968)
-http://103.121.39.254/media/disk4/IMDb Top 250 Movies/2001.A.Space.Odyssey.1968.1080p.BluRay.H264.AAC-RARBG/2001.A.Space.Odyssey.1968.1080p.BluRay.H264.AAC-RARBG.mp4
-`;
-
 const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
   tvshows:
@@ -87,10 +77,17 @@ export default function OlivePlayer() {
       })
       .catch(() => console.warn("Failed to load live channels"));
 
-    // Movies
-    const movieList = parseMoviesM3U(MOVIES_M3U);
-    setMovies(movieList);
-    if (movieList.length) setCurrentUrl(movieList[0].url);
+    // Movies from IMDb Top 250 M3U
+    fetch(
+      "https://gist.githubusercontent.com/cirrusUK/f2ec33786c4820e4b4ac4670b2a8afea/raw/320031be25bb03b3b1d5fac9f93b19c82a7e9cef/imdb250.m3u"
+    )
+      .then((res) => res.text())
+      .then((text) => {
+        const movieList = parseMoviesM3U(text);
+        setMovies(movieList);
+        if (movieList.length) setCurrentUrl(movieList[0].url);
+      })
+      .catch(() => console.warn("Failed to load IMDb Top 250 movies"));
 
     // TV Shows
     fetch(PLAYLISTS.tvshows)
