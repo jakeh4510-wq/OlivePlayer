@@ -8,69 +8,26 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-const MOVIES_M3U = `
-#EXTM3U
-#EXTINF:0,12 Years a Slave (2013)
-http://103.121.39.254/media/disk4/IMDb Top 250 Movies/12 Years a Slave (2013) [1080p]/12.Years.a.Slave.2013.1080p.BluRay.x264.YIFY.mp4
-#EXTINF:0,12 Angry Men (1957)
-http://103.121.39.254/media/disk4/IMDb Top 250 Movies/12.Angry.Men.1957.1080p.BluRay.H264.AAC [DDN]/12.Angry.Men.1957.1080p.BluRay.H264.AAC [DDN].mp4
-#EXTINF:0,2001: A Space Odyssey (1968)
-http://103.121.39.254/media/disk4/IMDb Top 250 Movies/2001.A.Space.Odyssey.1968.1080p.BluRay.H264.AAC-RARBG/2001.A.Space.Odyssey.1968.1080p.BluRay.H264.AAC-RARBG.mp4
-`;
-
+// Playlists
 const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
-  tvshows:
-    "https://aymrgknetzpucldhpkwm.supabase.co/storage/v1/object/public/tmdb/trending-series.m3u",
+  movies:
+    "https://gist.githubusercontent.com/cirrusUK/f2ec33786c4820e4b4ac4670b2a8afea/raw/320031be25bb03b3b1d5fac9f93b19c82a7e9cef/imdb250.m3u",
 };
 
 export default function OlivePlayer() {
   const playerRef = useRef(null);
   const playerInstance = useRef(null);
 
+  const [section, setSection] = useState("live");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [section, setSection] = useState("live"); // live, movies, tvshows
-
   const [liveChannels, setLiveChannels] = useState([]);
   const [movies, setMovies] = useState([]);
-  const [tvShowsGrouped, setTvShowsGrouped] = useState({});
-  const [selectedTvShow, setSelectedTvShow] = useState(null);
-  const [seasonCollapse, setSeasonCollapse] = useState({});
-
   const [currentUrl, setCurrentUrl] = useState("");
-
-  // Parse TV show name into show, season, episode
-  const parseTvShowName = (name) => {
-    const match = name.match(/^(.*?)\s*(\(\d{4}\))?\s*S(\d+)E(\d+)/i);
-    if (match) {
-      return {
-        showName: match[1].trim(),
-        season: "S" + match[3],
-        episode: "E" + match[4],
-        fullName: name,
-      };
-    } else {
-      return { showName: name, season: "S01", episode: "", fullName: name };
-    }
-  };
-
-  // Parse hardcoded movies M3U manually
-  const parseMoviesM3U = (m3u) => {
-    const lines = m3u.split("\n").filter((l) => l.trim() !== "");
-    const movieList = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("#EXTINF:")) {
-        const name = lines[i].split(",")[1] || "Unknown";
-        const url = lines[i + 1] || "";
-        if (url) movieList.push({ name, url, type: "video/mp4" });
-      }
-    }
-    return movieList;
-  };
 
   // Load playlists
   useEffect(() => {
-    // Live TV
+    // Live TV (untouched)
     fetch(PLAYLISTS.live)
       .then((res) => res.text())
       .then((text) => {
@@ -80,74 +37,51 @@ export default function OlivePlayer() {
           .map((ch) => ({
             name: ch.name || "Unknown",
             url: ch.url,
-            type: ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
           }));
         setLiveChannels(live);
         if (live.length) setCurrentUrl(live[0].url);
-      })
-      .catch(() => console.warn("Failed to load live channels"));
+      });
 
     // Movies
-    const movieList = parseMoviesM3U(MOVIES_M3U);
-    setMovies(movieList);
-    if (movieList.length) setCurrentUrl(movieList[0].url);
-
-    // TV Shows
-    fetch(PLAYLISTS.tvshows)
+    fetch(PLAYLISTS.movies)
       .then((res) => res.text())
       .then((text) => {
-        const grouped = {};
-        parse(text)
-          .items.filter((i) => i.url)
-          .forEach((ch) => {
-            const { showName, season, fullName } = parseTvShowName(ch.name);
-            if (!grouped[showName]) grouped[showName] = {};
-            if (!grouped[showName][season]) grouped[showName][season] = [];
-            grouped[showName][season].push({
-              name: fullName,
-              url: ch.url,
-              type: ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
-            });
-          });
-        setTvShowsGrouped(grouped);
-      })
-      .catch(() => console.warn("Failed to load TV shows"));
+        const parsed = parse(text);
+        const movieList = parsed.items
+          .filter((i) => i.url)
+          .map((mv) => ({
+            name: mv.name || mv.url.split("/").pop(),
+            url: mv.url,
+          }));
+        setMovies(movieList);
+      });
   }, []);
 
-  // Initialize Video.js
+  // Initialize Video.js once
   useEffect(() => {
-    if (!playerInstance.current && playerRef.current) {
-      playerInstance.current = videojs(playerRef.current, { controls: true, fluid: true });
+    if (!playerInstance.current) {
+      playerInstance.current = videojs(playerRef.current, {
+        autoplay: false,
+        controls: true,
+        fluid: true,
+        preload: "auto",
+      });
     }
   }, []);
 
-  // Update Video.js source
+  // Update video source
   useEffect(() => {
     if (playerInstance.current && currentUrl) {
-      playerInstance.current.pause();
-      playerInstance.current.src({ src: currentUrl });
+      playerInstance.current.src({ src: currentUrl, type: "video/mp4" });
       playerInstance.current.load();
     }
   }, [currentUrl]);
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
+    // Only auto-select first item if switching sections
     if (newSection === "live" && liveChannels.length) setCurrentUrl(liveChannels[0].url);
-    if (newSection === "movies" && movies.length) setCurrentUrl(movies[0].url);
-    if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
-      const firstShow = Object.keys(tvShowsGrouped)[0];
-      setSelectedTvShow(firstShow);
-      const firstSeason = Object.keys(tvShowsGrouped[firstShow])[0];
-      setCurrentUrl(tvShowsGrouped[firstShow][firstSeason][0].url);
-
-      const collapseStates = {};
-      Object.keys(tvShowsGrouped[firstShow]).forEach((season) => (collapseStates[season] = true));
-      setSeasonCollapse(collapseStates);
-    }
-  };
-
-  const toggleSeason = (season) => {
-    setSeasonCollapse((prev) => ({ ...prev, [season]: !prev[season] }));
+    if (newSection === "movies" && movies.length) setCurrentUrl(""); // Do not auto-play movie until clicked
   };
 
   return (
@@ -159,7 +93,6 @@ export default function OlivePlayer() {
         backgroundImage: `url(${BACKGROUND_GIF})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        overflow: "hidden",
       }}
     >
       {/* Sidebar */}
@@ -168,23 +101,16 @@ export default function OlivePlayer() {
           width: sidebarOpen ? "260px" : "0px",
           backgroundColor: "rgba(26,26,26,0.95)",
           color: "#fff",
-          flexShrink: 0,
           transition: "width 0.3s",
-          padding: sidebarOpen ? "20px" : "0px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
           overflowY: "auto",
+          padding: sidebarOpen ? "20px" : "0px",
+          flexShrink: 0,
         }}
       >
         {sidebarOpen && (
           <>
-            <img
-              src={OLIVE_LOGO}
-              alt="Olive Logo"
-              style={{ width: "120px", height: "120px", borderRadius: "50%", marginBottom: "10px" }}
-            />
-            <h1 style={{ color: "#fff", fontFamily: "'Brush Script MT', cursive", fontSize: "32px", marginBottom: "20px" }}>
+            <img src={OLIVE_LOGO} alt="Olive Logo" style={{ width: "120px", height: "120px", borderRadius: "50%", marginBottom: "10px" }} />
+            <h1 style={{ fontFamily: "'Brush Script MT', cursive", fontSize: "32px", color: "#fff", marginBottom: "20px" }}>
               OlivePlayer
             </h1>
 
@@ -197,9 +123,8 @@ export default function OlivePlayer() {
                     cursor: "pointer",
                     padding: "10px",
                     marginBottom: "10px",
-                    borderRadius: "6px",
                     backgroundColor: currentUrl === ch.url ? "#555" : "#333",
-                    width: "100%",
+                    borderRadius: "6px",
                   }}
                 >
                   {ch.name}
@@ -215,37 +140,11 @@ export default function OlivePlayer() {
                     cursor: "pointer",
                     padding: "10px",
                     marginBottom: "10px",
-                    borderRadius: "6px",
                     backgroundColor: currentUrl === mv.url ? "#555" : "#333",
-                    width: "100%",
+                    borderRadius: "6px",
                   }}
                 >
                   {mv.name}
-                </div>
-              ))}
-
-            {section === "tvshows" &&
-              Object.keys(tvShowsGrouped).map((show, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    setSelectedTvShow(show);
-                    const firstSeason = Object.keys(tvShowsGrouped[show])[0];
-                    setCurrentUrl(tvShowsGrouped[show][firstSeason][0].url);
-                    const collapseStates = {};
-                    Object.keys(tvShowsGrouped[show]).forEach((season) => (collapseStates[season] = true));
-                    setSeasonCollapse(collapseStates);
-                  }}
-                  style={{
-                    cursor: "pointer",
-                    padding: "10px",
-                    marginBottom: "10px",
-                    borderRadius: "6px",
-                    width: "100%",
-                    backgroundColor: selectedTvShow === show ? "#555" : "#333",
-                  }}
-                >
-                  {show}
                 </div>
               ))}
           </>
@@ -253,42 +152,35 @@ export default function OlivePlayer() {
       </div>
 
       {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <div style={{ marginBottom: "20px" }}>
-          <button onClick={() => handleSectionChange("live")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "live" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button onClick={() => handleSectionChange("live")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "live" ? "#28a745" : "#333", color: "#fff", borderRadius: "6px", border: "none" }}>
             Live TV
           </button>
-          <button onClick={() => handleSectionChange("movies")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "movies" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button onClick={() => handleSectionChange("movies")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "movies" ? "#28a745" : "#333", color: "#fff", borderRadius: "6px", border: "none" }}>
             Movies
-          </button>
-          <button onClick={() => handleSectionChange("tvshows")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "tvshows" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
-            TV Shows
           </button>
         </div>
 
         <video ref={playerRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }} />
-
-        {section === "tvshows" && selectedTvShow && (
-          <div style={{ marginTop: "20px", maxHeight: "300px", overflowY: "auto", width: "95%", backgroundColor: "rgba(26,26,26,0.8)", padding: "10px", borderRadius: "8px", color: "#fff" }}>
-            {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
-              <div key={season}>
-                <div onClick={() => toggleSeason(season)} style={{ cursor: "pointer", padding: "6px", backgroundColor: "#444", marginTop: "5px", borderRadius: "4px" }}>
-                  {season}
-                </div>
-                {!seasonCollapse[season] &&
-                  tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
-                    <div key={idx} onClick={() => setCurrentUrl(ep.url)} style={{ cursor: "pointer", padding: "6px", marginLeft: "10px", marginTop: "2px", borderRadius: "4px", color: "#fff", backgroundColor: currentUrl === ep.url ? "#555" : "#222" }}>
-                      {ep.name}
-                    </div>
-                  ))}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Sidebar toggle */}
-      <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ position: "absolute", top: "20px", left: sidebarOpen ? "280px" : "20px", padding: "8px 12px", backgroundColor: "#333", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", zIndex: 1000 }}>
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: sidebarOpen ? "280px" : "20px",
+          padding: "8px 12px",
+          backgroundColor: "#333",
+          color: "#fff",
+          borderRadius: "5px",
+          border: "none",
+          cursor: "pointer",
+          zIndex: 1000,
+        }}
+      >
         {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
       </button>
     </div>
