@@ -8,10 +8,11 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
+// Movie section now just has a single embedded movie
 const MOVIES_M3U = `
 #EXTM3U
-#EXTINF:0,Smile 1
-https://bcdnw.hakunaymatata.com/resource/47004f7b640b70883d2a82594460398c.mp4?sign=d185d57d142361216c46db74924888ef&t=1757384648
+#EXTINF:0,Embedded Movie
+https://player.autoembed.cc/embed/movie/882598
 `;
 
 const PLAYLISTS = {
@@ -56,7 +57,7 @@ export default function OlivePlayer() {
       if (lines[i].startsWith("#EXTINF:")) {
         const name = lines[i].split(",")[1] || "Unknown";
         const url = lines[i + 1] || "";
-        if (url) movieList.push({ name, url, type: "video/mp4" });
+        if (url) movieList.push({ name, url, type: "embed" });
       }
     }
     return movieList;
@@ -95,7 +96,7 @@ export default function OlivePlayer() {
           .forEach((ch) => {
             const { showName, season, fullName } = parseTvShowName(ch.name);
             if (!grouped[showName]) grouped[showName] = {};
-            if (!grouped[showName][season]) grouped[showName][season] = [];
+            if (!grouped[showName][season]) grouped[season] = [];
             grouped[showName][season].push({
               name: fullName,
               url: ch.url,
@@ -108,18 +109,18 @@ export default function OlivePlayer() {
   }, []);
 
   useEffect(() => {
-    if (!playerInstance.current && playerRef.current) {
+    if (!playerInstance.current && playerRef.current && section !== "movies") {
       playerInstance.current = videojs(playerRef.current, { controls: true, fluid: true });
     }
-  }, []);
+  }, [section]);
 
   useEffect(() => {
-    if (playerInstance.current && currentUrl) {
+    if (playerInstance.current && currentUrl && section !== "movies") {
       playerInstance.current.pause();
       playerInstance.current.src({ src: currentUrl });
       playerInstance.current.load();
     }
-  }, [currentUrl]);
+  }, [currentUrl, section]);
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
@@ -257,7 +258,19 @@ export default function OlivePlayer() {
           </button>
         </div>
 
-        <video ref={playerRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }} />
+        {/* Replace video player with iframe if section is movies */}
+        {section === "movies" ? (
+          <iframe
+            title="Embedded Movie"
+            src={currentUrl}
+            width="95%"
+            height="700px"
+            style={{ border: "none", borderRadius: "8px" }}
+            allowFullScreen
+          />
+        ) : (
+          <video ref={playerRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }} />
+        )}
 
         {section === "tvshows" && selectedTvShow && (
           <div style={{ marginTop: "20px", maxHeight: "300px", overflowY: "auto", width: "95%", backgroundColor: "rgba(26,26,26,0.8)", padding: "10px", borderRadius: "8px", color: "#fff" }}>
