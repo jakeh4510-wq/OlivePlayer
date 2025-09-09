@@ -8,10 +8,10 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Movie section now just has a single embedded movie
+// Updated Movies M3U (example with embed links)
 const MOVIES_M3U = `
 #EXTM3U
-#EXTINF:0,Embedded Movie
+#EXTINF:0,Smile (2022)
 https://player.autoembed.cc/embed/movie/882598
 `;
 
@@ -36,20 +36,7 @@ export default function OlivePlayer() {
 
   const [currentUrl, setCurrentUrl] = useState("");
 
-  const parseTvShowName = (name) => {
-    const match = name.match(/^(.*?)\s*(\(\d{4}\))?\s*S(\d+)E(\d+)/i);
-    if (match) {
-      return {
-        showName: match[1].trim(),
-        season: "S" + match[3],
-        episode: "E" + match[4],
-        fullName: name,
-      };
-    } else {
-      return { showName: name, season: "S01", episode: "", fullName: name };
-    }
-  };
-
+  // Parse hardcoded movies M3U manually
   const parseMoviesM3U = (m3u) => {
     const lines = m3u.split("\n").filter((l) => l.trim() !== "");
     const movieList = [];
@@ -57,14 +44,14 @@ export default function OlivePlayer() {
       if (lines[i].startsWith("#EXTINF:")) {
         const name = lines[i].split(",")[1] || "Unknown";
         const url = lines[i + 1] || "";
-        if (url) movieList.push({ name, url, type: "embed" });
+        if (url) movieList.push({ name, url, type: url.includes("embed") ? "iframe" : "video/mp4" });
       }
     }
     return movieList;
   };
 
   useEffect(() => {
-    // Live TV
+    // Load Live TV
     fetch(PLAYLISTS.live)
       .then((res) => res.text())
       .then((text) => {
@@ -81,12 +68,12 @@ export default function OlivePlayer() {
       })
       .catch(() => console.warn("Failed to load live channels"));
 
-    // Movies
+    // Load Movies
     const movieList = parseMoviesM3U(MOVIES_M3U);
     setMovies(movieList);
     if (movieList.length) setCurrentUrl(movieList[0].url);
 
-    // TV Shows
+    // Load TV Shows
     fetch(PLAYLISTS.tvshows)
       .then((res) => res.text())
       .then((text) => {
@@ -94,11 +81,12 @@ export default function OlivePlayer() {
         parse(text)
           .items.filter((i) => i.url)
           .forEach((ch) => {
-            const { showName, season, fullName } = parseTvShowName(ch.name);
+            const showName = ch.name.split(" S")[0];
+            const season = ch.name.match(/S\d+/)?.[0] || "S01";
             if (!grouped[showName]) grouped[showName] = {};
-            if (!grouped[showName][season]) grouped[season] = [];
+            if (!grouped[showName][season]) grouped[showName][season] = [];
             grouped[showName][season].push({
-              name: fullName,
+              name: ch.name,
               url: ch.url,
               type: ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
             });
@@ -108,12 +96,14 @@ export default function OlivePlayer() {
       .catch(() => console.warn("Failed to load TV shows"));
   }, []);
 
+  // Initialize Video.js only for non-Movies sections
   useEffect(() => {
     if (!playerInstance.current && playerRef.current && section !== "movies") {
       playerInstance.current = videojs(playerRef.current, { controls: true, fluid: true });
     }
   }, [section]);
 
+  // Update Video.js source
   useEffect(() => {
     if (playerInstance.current && currentUrl && section !== "movies") {
       playerInstance.current.pause();
@@ -258,18 +248,24 @@ export default function OlivePlayer() {
           </button>
         </div>
 
-        {/* Replace video player with iframe if section is movies */}
+        {/* Video player or iframe */}
         {section === "movies" ? (
           <iframe
-            title="Embedded Movie"
             src={currentUrl}
+            title="Movie Player"
             width="95%"
-            height="700px"
-            style={{ border: "none", borderRadius: "8px" }}
+            height="700"
+            style={{ border: "none", borderRadius: "8px", backgroundColor: "#000" }}
             allowFullScreen
-          />
+          ></iframe>
         ) : (
-          <video ref={playerRef} className="video-js vjs-big-play-centered" controls playsInline style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }} />
+          <video
+            ref={playerRef}
+            className="video-js vjs-big-play-centered"
+            controls
+            playsInline
+            style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }}
+          />
         )}
 
         {section === "tvshows" && selectedTvShow && (
