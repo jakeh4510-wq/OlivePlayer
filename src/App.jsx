@@ -8,18 +8,18 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Movies list with Hydra embed links
+// Movies list using embedded URLs
 const MOVIES = [
-  { name: "Metallica Live Shit Binge & Purge (1993)", url: "https://hyhd.org/embed/tt1700430/", img: "" },
-  { name: "Nostalgia (2018)", url: "https://hyhd.org/embed/tt10160758/", img: "" },
-  { name: "Dial H I S T O R Y (1997)", url: "https://hyhd.org/embed/tt0367655/", img: "" },
-  { name: "Whaledreamers (2006)", url: "https://hyhd.org/embed/tt0867160/", img: "" },
-  { name: "A Leap in the Dark (1980)", url: "https://hyhd.org/embed/tt0079845/", img: "" },
-  { name: "Snnike (2025)", url: "https://hyhd.org/embed/tt34807878/", img: "" },
-  { name: "A Film Like Any Other (1968)", url: "https://hyhd.org/embed/tt0063736/", img: "" },
-  { name: "A Father for Brittany (1998)", url: "https://hydrahd.io/movie/195406-watch-a-father-for-brittany-1998-online", img: "" },
-  { name: "Inspector Zende (2025)", url: "https://hydrahd.io/movie/195389-watch-inspector-zende-2025-online", img: "" },
-  { name: "Noi Uomini Duri (1987)", url: "https://hyhd.org/embed/tt0093645/", img: "" },
+  { name: "195388-watch-metallica-live-shit-binge-amp-purge-seattle-1993-online", url: "https://hyhd.org/embed/tt1700430/" },
+  { name: "195411-watch-nostalgia-2018-online", url: "https://hyhd.org/embed/tt10160758/" },
+  { name: "195404-watch-dial-h-i-s-t-o-r-y-1997-online", url: "https://hyhd.org/embed/tt0367655/" },
+  { name: "195408-watch-whaledreamers-2006-online", url: "https://hyhd.org/embed/tt0867160/" },
+  { name: "195390-watch-a-leap-in-the-dark-1980-online", url: "https://hyhd.org/embed/tt0079845/" },
+  { name: "195394-watch-snnike-2025-online", url: "https://hyhd.org/embed/tt34807878/" },
+  { name: "195401-watch-a-film-like-any-other-1968-online", url: "https://hyhd.org/embed/tt0063736/" },
+  { name: "195406-watch-a-father-for-brittany-1998-online", url: "https://hydrahd.io/movie/195406-watch-a-father-for-brittany-1998-online" },
+  { name: "195389-watch-inspector-zende-2025-online", url: "https://hydrahd.io/movie/195389-watch-inspector-zende-2025-online" },
+  { name: "195405-watch-noi-uomini-duri-1987-online", url: "https://hyhd.org/embed/tt0093645/" },
 ];
 
 const PLAYLISTS = {
@@ -40,11 +40,12 @@ export default function OlivePlayer() {
   const [selectedTvShow, setSelectedTvShow] = useState(null);
   const [seasonCollapse, setSeasonCollapse] = useState({});
 
-  const [currentUrl, setCurrentUrl] = useState("");
-  const [currentMovie, setCurrentMovie] = useState(null);
+  const [currentUrl, setCurrentUrl] = useState(""); // For live TV & TV shows
+  const [currentMovie, setCurrentMovie] = useState(null); // For movies
 
-  // Load Live TV
+  // Load playlists
   useEffect(() => {
+    // Live TV
     fetch(PLAYLISTS.live)
       .then((res) => res.text())
       .then((text) => {
@@ -60,10 +61,8 @@ export default function OlivePlayer() {
         if (live.length) setCurrentUrl(live[0].url);
       })
       .catch(() => console.warn("Failed to load live channels"));
-  }, []);
 
-  // Load TV Shows
-  useEffect(() => {
+    // TV Shows
     fetch(PLAYLISTS.tvshows)
       .then((res) => res.text())
       .then((text) => {
@@ -74,7 +73,7 @@ export default function OlivePlayer() {
             const showName = ch.name.split(" S")[0];
             const season = ch.name.match(/S\d+/)?.[0] || "S01";
             if (!grouped[showName]) grouped[showName] = {};
-            if (!grouped[showName][season]) grouped[season] = [];
+            if (!grouped[showName][season]) grouped[showName][season] = [];
             grouped[showName][season].push({
               name: ch.name,
               url: ch.url,
@@ -86,7 +85,7 @@ export default function OlivePlayer() {
       .catch(() => console.warn("Failed to load TV shows"));
   }, []);
 
-  // Initialize Video.js for Live TV & TV Shows
+  // Initialize Video.js for live TV and TV Shows only
   useEffect(() => {
     if (!playerInstance.current && playerRef.current && section !== "movies") {
       playerInstance.current = videojs(playerRef.current, { controls: true, fluid: true });
@@ -104,8 +103,9 @@ export default function OlivePlayer() {
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
+
     if (newSection === "live" && liveChannels.length) setCurrentUrl(liveChannels[0].url);
-    if (newSection === "movies") setCurrentMovie(null); // Reset movie selection
+    if (newSection === "movies" && MOVIES.length) setCurrentMovie(MOVIES[0]);
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
       const firstShow = Object.keys(tvShowsGrouped)[0];
       setSelectedTvShow(firstShow);
@@ -160,6 +160,7 @@ export default function OlivePlayer() {
               OlivePlayer
             </h1>
 
+            {/* Live TV */}
             {section === "live" &&
               liveChannels.map((ch, i) => (
                 <div
@@ -178,129 +179,106 @@ export default function OlivePlayer() {
                 </div>
               ))}
 
+            {/* Movies */}
             {section === "movies" &&
               MOVIES.map((mv, i) => (
                 <div
                   key={i}
-                  style={{
-                    marginBottom: "15px",
-                    borderRadius: "6px",
-                    overflow: "hidden",
-                    backgroundColor: currentMovie?.url === mv.url ? "#555" : "#333",
-                    padding: "10px",
-                  }}
-                >
-                  <h4 style={{ color: "#fff", marginBottom: "10px" }}>{mv.name}</h4>
-
-                  {/* Movie placeholder using Codegena iframe */}
-                  <div
-                    className="codegena_iframe"
-                    data-src={mv.url}
-                    data-img={mv.img || "https://via.placeholder.com/680x400?text=Movie+Poster"}
-                    style={{ height: "400px", width: "680px" }}
-                    data-responsive="true"
-                  ></div>
-
-                  {/* Load button */}
-                  <button
-                    onClick={() => {
-                      setCurrentMovie(mv);
-                      window.load_iframe(i + 1);
-                    }}
-                    style={{
-                      marginTop: "10px",
-                      padding: "8px 12px",
-                      backgroundColor: "#28a745",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "5px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Play
-                  </button>
-                </div>
-              ))}
-
-            {section === "tvshows" &&
-              Object.keys(tvShowsGrouped).map((show, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    setSelectedTvShow(show);
-                    const firstSeason = Object.keys(tvShowsGrouped[show])[0];
-                    setCurrentUrl(tvShowsGrouped[show][firstSeason][0].url);
-                    const collapseStates = {};
-                    Object.keys(tvShowsGrouped[show]).forEach((season) => (collapseStates[season] = true));
-                    setSeasonCollapse(collapseStates);
-                  }}
+                  onClick={() => setCurrentMovie(mv)}
                   style={{
                     cursor: "pointer",
                     padding: "10px",
                     marginBottom: "10px",
                     borderRadius: "6px",
+                    backgroundColor: currentMovie?.url === mv.url ? "#555" : "#333",
                     width: "100%",
-                    backgroundColor: selectedTvShow === show ? "#555" : "#333",
                   }}
                 >
-                  {show}
+                  {mv.name}
+                </div>
+              ))}
+
+            {/* TV Shows */}
+            {section === "tvshows" &&
+              Object.keys(tvShowsGrouped).map((showName, i) => (
+                <div key={i} style={{ marginBottom: "10px", width: "100%" }}>
+                  <h3 style={{ color: "#fff", cursor: "pointer" }} onClick={() => setSelectedTvShow(showName)}>
+                    {showName}
+                  </h3>
+                  {selectedTvShow === showName &&
+                    Object.keys(tvShowsGrouped[showName]).map((season) => (
+                      <div key={season} style={{ marginLeft: "10px" }}>
+                        <h4
+                          style={{ color: "#ccc", cursor: "pointer" }}
+                          onClick={() => toggleSeason(season)}
+                        >
+                          {season}
+                        </h4>
+                        {seasonCollapse[season] &&
+                          tvShowsGrouped[showName][season].map((ep, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => setCurrentUrl(ep.url)}
+                              style={{
+                                cursor: "pointer",
+                                padding: "6px",
+                                marginBottom: "4px",
+                                borderRadius: "4px",
+                                backgroundColor: currentUrl === ep.url ? "#555" : "#333",
+                              }}
+                            >
+                              {ep.name}
+                            </div>
+                          ))}
+                      </div>
+                    ))}
                 </div>
               ))}
           </>
         )}
       </div>
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px" }}>
-        <div style={{ marginBottom: "20px" }}>
-          <button onClick={() => handleSectionChange("live")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "live" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+      {/* Main player area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "20px" }}>
+        {/* Section buttons */}
+        <div style={{ marginBottom: "15px" }}>
+          <button onClick={() => handleSectionChange("live")} style={{ marginRight: "10px" }}>
             Live TV
           </button>
-          <button onClick={() => handleSectionChange("movies")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "movies" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button onClick={() => handleSectionChange("movies")} style={{ marginRight: "10px" }}>
             Movies
           </button>
-          <button onClick={() => handleSectionChange("tvshows")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "tvshows" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
-            TV Shows
-          </button>
+          <button onClick={() => handleSectionChange("tvshows")}>TV Shows</button>
         </div>
 
-        {/* Video player */}
+        {/* Video / iframe display */}
+        {section === "movies" && currentMovie && (
+          <div className="iframe-container" style={{ position: "relative", width: "80%", height: "450px" }}>
+            <div id="loader" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: "20px", color: "#fff" }}>
+              Loading...
+            </div>
+            <iframe
+              id="iframe"
+              src={currentMovie.url}
+              style={{ display: "none", width: "100%", height: "100%", border: "none" }}
+              onLoad={() => {
+                document.getElementById("loader").style.display = "none";
+                document.getElementById("iframe").style.display = "block";
+              }}
+            ></iframe>
+          </div>
+        )}
+
         {section !== "movies" && (
           <video
             ref={playerRef}
             className="video-js vjs-big-play-centered"
+            style={{ width: "80%", height: "450px" }}
             controls
-            playsInline
-            style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }}
-          />
-        )}
-
-        {section === "tvshows" && selectedTvShow && (
-          <div style={{ marginTop: "20px", maxHeight: "300px", overflowY: "auto", width: "95%", backgroundColor: "rgba(26,26,26,0.8)", padding: "10px", borderRadius: "8px", color: "#fff" }}>
-            {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
-              <div key={season}>
-                <div onClick={() => toggleSeason(season)} style={{ cursor: "pointer", padding: "6px", backgroundColor: "#444", marginTop: "5px", borderRadius: "4px" }}>
-                  {season}
-                </div>
-                {!seasonCollapse[season] &&
-                  tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
-                    <div key={idx} onClick={() => setCurrentUrl(ep.url)} style={{ cursor: "pointer", padding: "6px", marginLeft: "10px", marginTop: "2px", borderRadius: "4px", color: "#fff", backgroundColor: currentUrl === ep.url ? "#555" : "#222" }}>
-                      {ep.name}
-                    </div>
-                  ))}
-              </div>
-            ))}
-          </div>
+            autoPlay
+          ></video>
         )}
       </div>
-
-      {/* Sidebar toggle */}
-      <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ position: "absolute", top: "20px", left: sidebarOpen ? "280px" : "20px", padding: "8px 12px", backgroundColor: "#333", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", zIndex: 1000 }}>
-        {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
-      </button>
-
-      {/* Codegena script */}
-      <script src="https://codegena.com/assets/js/async-iframe.js"></script>
     </div>
   );
 }
