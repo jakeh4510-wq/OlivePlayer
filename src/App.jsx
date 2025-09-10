@@ -8,7 +8,7 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Updated Movies M3U (example with embed links)
+// Movies M3U with embed links
 const MOVIES_M3U = `
 #EXTM3U
 #EXTINF:0,Smile (2022)
@@ -78,7 +78,6 @@ export default function OlivePlayer() {
     // Load Movies
     const movieList = parseMoviesM3U(MOVIES_M3U);
     setMovies(movieList);
-    // ⛔ Do NOT auto-select first movie here
 
     // Load TV Shows
     fetch(PLAYLISTS.tvshows)
@@ -207,7 +206,8 @@ export default function OlivePlayer() {
                     padding: "10px",
                     marginBottom: "10px",
                     borderRadius: "6px",
-                    backgroundColor: currentUrl === ch.url ? "#555" : "#333",
+                    backgroundColor:
+                      currentUrl === ch.url ? "#555" : "#333",
                     width: "100%",
                   }}
                 >
@@ -225,7 +225,8 @@ export default function OlivePlayer() {
                     padding: "10px",
                     marginBottom: "10px",
                     borderRadius: "6px",
-                    backgroundColor: currentUrl === mv.url ? "#555" : "#333",
+                    backgroundColor:
+                      currentUrl === mv.url ? "#555" : "#333",
                     width: "100%",
                   }}
                 >
@@ -239,8 +240,12 @@ export default function OlivePlayer() {
                   key={idx}
                   onClick={() => {
                     setSelectedTvShow(show);
-                    const firstSeason = Object.keys(tvShowsGrouped[show])[0];
-                    setCurrentUrl(tvShowsGrouped[show][firstSeason][0].url);
+                    const firstSeason = Object.keys(
+                      tvShowsGrouped[show]
+                    )[0];
+                    setCurrentUrl(
+                      tvShowsGrouped[show][firstSeason][0].url
+                    );
                     const collapseStates = {};
                     Object.keys(tvShowsGrouped[show]).forEach(
                       (season) => (collapseStates[season] = true)
@@ -335,8 +340,20 @@ export default function OlivePlayer() {
               allowFullScreen
             ></iframe>
           ) : (
-            <div style={{ color: "#fff", marginTop: "50px" }}>
-              Select a movie from the sidebar to start watching
+            <div
+              style={{
+                width: "95%",
+                height: "700px",
+                borderRadius: "8px",
+                backgroundColor: "#000",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+              }}
+            >
+              🎬 Select a movie from the sidebar to start watching
             </div>
           )
         ) : (
