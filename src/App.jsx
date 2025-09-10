@@ -8,7 +8,7 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Hydra Movies M3U
+// Updated Hydra movies M3U
 const MOVIES_M3U = `
 #EXTM3U
 #EXTINF:0,195388-watch-metallica-live-shit-binge-amp-purge-seattle-1993-online
@@ -45,13 +45,11 @@ export default function OlivePlayer() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [section, setSection] = useState("live"); // live, movies, tvshows
-
   const [liveChannels, setLiveChannels] = useState([]);
   const [movies, setMovies] = useState([]);
   const [tvShowsGrouped, setTvShowsGrouped] = useState({});
   const [selectedTvShow, setSelectedTvShow] = useState(null);
   const [seasonCollapse, setSeasonCollapse] = useState({});
-
   const [currentUrl, setCurrentUrl] = useState("");
 
   // Parse hardcoded movies M3U manually
@@ -62,7 +60,12 @@ export default function OlivePlayer() {
       if (lines[i].startsWith("#EXTINF:")) {
         const name = lines[i].split(",")[1] || "Unknown";
         const url = lines[i + 1] || "";
-        if (url) movieList.push({ name, url });
+        if (url)
+          movieList.push({
+            name,
+            url,
+            type: url.includes("embed") ? "iframe" : "video/mp4",
+          });
       }
     }
     return movieList;
@@ -132,7 +135,7 @@ export default function OlivePlayer() {
   const handleSectionChange = (newSection) => {
     setSection(newSection);
     if (newSection === "live" && liveChannels.length) setCurrentUrl(liveChannels[0].url);
-    if (newSection === "movies" && movies.length) setCurrentUrl(movies[0].url);
+    if (newSection === "movies") setCurrentUrl(""); // clear until a movie is clicked
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
       const firstShow = Object.keys(tvShowsGrouped)[0];
       setSelectedTvShow(firstShow);
@@ -266,17 +269,21 @@ export default function OlivePlayer() {
         </div>
 
         {/* Video player or iframe */}
-        {section === "movies" && currentUrl ? (
-          <div style={{ width: "95%", maxWidth: "1400px", height: "700px" }}>
+        {section === "movies" ? (
+          currentUrl ? (
             <iframe
               src={currentUrl}
               title="Movie Player"
-              width="100%"
-              height="100%"
+              width="95%"
+              height="700"
               style={{ border: "none", borderRadius: "8px", backgroundColor: "#000" }}
               allowFullScreen
             />
-          </div>
+          ) : (
+            <div style={{ color: "#fff", fontSize: "18px", marginTop: "50px" }}>
+              Select a movie to play
+            </div>
+          )
         ) : (
           <video
             ref={playerRef}
