@@ -8,30 +8,14 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Updated Hydra movies M3U
-const MOVIES_M3U = `
-#EXTM3U
-#EXTINF:0,195388-watch-metallica-live-shit-binge-amp-purge-seattle-1993-online
-https://hyhd.org/embed/tt1700430/
-#EXTINF:0,195411-watch-nostalgia-2018-online
-https://hyhd.org/embed/tt10160758/
-#EXTINF:0,195404-watch-dial-h-i-s-t-o-r-y-1997-online
-https://hyhd.org/embed/tt0367655/
-#EXTINF:0,195408-watch-whaledreamers-2006-online
-https://hyhd.org/embed/tt0867160/
-#EXTINF:0,195390-watch-a-leap-in-the-dark-1980-online
-https://hyhd.org/embed/tt0079845/
-#EXTINF:0,195394-watch-snnike-2025-online
-https://hyhd.org/embed/tt34807878/
-#EXTINF:0,195401-watch-a-film-like-any-other-1968-online
-https://hyhd.org/embed/tt0063736/
-#EXTINF:0,195406-watch-a-father-for-brittany-1998-online
-https://hydrahd.io/movie/195406-watch-a-father-for-brittany-1998-online
-#EXTINF:0,195389-watch-inspector-zende-2025-online
-https://hydrahd.io/movie/195389-watch-inspector-zende-2025-online
-#EXTINF:0,195405-watch-noi-uomini-duri-1987-online
-https://hyhd.org/embed/tt0093645/
-`;
+// Updated Movies with embed links
+const MOVIES = [
+  { name: "Metallica Live 1993", url: "https://hyhd.org/embed/tt1700430/" },
+  { name: "Nostalgia 2018", url: "https://hyhd.org/embed/tt10160758/" },
+  { name: "Dial H I S T O R Y 1997", url: "https://hyhd.org/embed/tt0367655/" },
+  { name: "Whaledreamers 2006", url: "https://hyhd.org/embed/tt0867160/" },
+  { name: "A Leap in the Dark 1980", url: "https://hyhd.org/embed/tt0079845/" },
+];
 
 const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
@@ -45,31 +29,13 @@ export default function OlivePlayer() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [section, setSection] = useState("live"); // live, movies, tvshows
+
   const [liveChannels, setLiveChannels] = useState([]);
-  const [movies, setMovies] = useState([]);
   const [tvShowsGrouped, setTvShowsGrouped] = useState({});
   const [selectedTvShow, setSelectedTvShow] = useState(null);
   const [seasonCollapse, setSeasonCollapse] = useState({});
   const [currentUrl, setCurrentUrl] = useState("");
-
-  // Parse hardcoded movies M3U manually
-  const parseMoviesM3U = (m3u) => {
-    const lines = m3u.split("\n").filter((l) => l.trim() !== "");
-    const movieList = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("#EXTINF:")) {
-        const name = lines[i].split(",")[1] || "Unknown";
-        const url = lines[i + 1] || "";
-        if (url)
-          movieList.push({
-            name,
-            url,
-            type: url.includes("embed") ? "iframe" : "video/mp4",
-          });
-      }
-    }
-    return movieList;
-  };
+  const [currentMovie, setCurrentMovie] = useState(null);
 
   useEffect(() => {
     // Load Live TV
@@ -88,10 +54,6 @@ export default function OlivePlayer() {
         if (live.length) setCurrentUrl(live[0].url);
       })
       .catch(() => console.warn("Failed to load live channels"));
-
-    // Load Movies
-    const movieList = parseMoviesM3U(MOVIES_M3U);
-    setMovies(movieList);
 
     // Load TV Shows
     fetch(PLAYLISTS.tvshows)
@@ -116,7 +78,7 @@ export default function OlivePlayer() {
       .catch(() => console.warn("Failed to load TV shows"));
   }, []);
 
-  // Initialize Video.js only for non-Movies sections
+  // Initialize Video.js for Live TV & TV shows only
   useEffect(() => {
     if (!playerInstance.current && playerRef.current && section !== "movies") {
       playerInstance.current = videojs(playerRef.current, { controls: true, fluid: true });
@@ -134,8 +96,13 @@ export default function OlivePlayer() {
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
+
     if (newSection === "live" && liveChannels.length) setCurrentUrl(liveChannels[0].url);
-    if (newSection === "movies") setCurrentUrl(""); // clear until a movie is clicked
+
+    if (newSection === "movies") {
+      setCurrentMovie(null); // Reset selection
+    }
+
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
       const firstShow = Object.keys(tvShowsGrouped)[0];
       setSelectedTvShow(firstShow);
@@ -190,6 +157,7 @@ export default function OlivePlayer() {
               OlivePlayer
             </h1>
 
+            {/* Live TV */}
             {section === "live" &&
               liveChannels.map((ch, i) => (
                 <div
@@ -208,17 +176,18 @@ export default function OlivePlayer() {
                 </div>
               ))}
 
+            {/* Movies */}
             {section === "movies" &&
-              movies.map((mv, i) => (
+              MOVIES.map((mv, i) => (
                 <div
                   key={i}
-                  onClick={() => setCurrentUrl(mv.url)}
+                  onClick={() => setCurrentMovie(mv)}
                   style={{
                     cursor: "pointer",
                     padding: "10px",
                     marginBottom: "10px",
                     borderRadius: "6px",
-                    backgroundColor: currentUrl === mv.url ? "#555" : "#333",
+                    backgroundColor: currentMovie?.url === mv.url ? "#555" : "#333",
                     width: "100%",
                   }}
                 >
@@ -226,6 +195,7 @@ export default function OlivePlayer() {
                 </div>
               ))}
 
+            {/* TV Shows */}
             {section === "tvshows" &&
               Object.keys(tvShowsGrouped).map((show, idx) => (
                 <div
@@ -257,32 +227,63 @@ export default function OlivePlayer() {
       {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px" }}>
         <div style={{ marginBottom: "20px" }}>
-          <button onClick={() => handleSectionChange("live")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "live" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button
+            onClick={() => handleSectionChange("live")}
+            style={{
+              margin: "0 10px",
+              padding: "10px 20px",
+              background: section === "live" ? "#28a745" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
             Live TV
           </button>
-          <button onClick={() => handleSectionChange("movies")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "movies" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button
+            onClick={() => handleSectionChange("movies")}
+            style={{
+              margin: "0 10px",
+              padding: "10px 20px",
+              background: section === "movies" ? "#28a745" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
             Movies
           </button>
-          <button onClick={() => handleSectionChange("tvshows")} style={{ margin: "0 10px", padding: "10px 20px", background: section === "tvshows" ? "#28a745" : "#333", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button
+            onClick={() => handleSectionChange("tvshows")}
+            style={{
+              margin: "0 10px",
+              padding: "10px 20px",
+              background: section === "tvshows" ? "#28a745" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
             TV Shows
           </button>
         </div>
 
-        {/* Video player or iframe */}
+        {/* Player */}
         {section === "movies" ? (
-          currentUrl ? (
+          currentMovie ? (
             <iframe
-              src={currentUrl}
-              title="Movie Player"
+              src={currentMovie.url}
+              title={currentMovie.name}
               width="95%"
-              height="700"
-              style={{ border: "none", borderRadius: "8px", backgroundColor: "#000" }}
+              height="700px"
+              style={{ border: "none", borderRadius: "8px" }}
               allowFullScreen
             />
           ) : (
-            <div style={{ color: "#fff", fontSize: "18px", marginTop: "50px" }}>
-              Select a movie to play
-            </div>
+            <div style={{ color: "#fff", fontSize: "18px" }}>Select a movie to play</div>
           )
         ) : (
           <video
@@ -294,16 +295,43 @@ export default function OlivePlayer() {
           />
         )}
 
+        {/* TV Shows Episodes */}
         {section === "tvshows" && selectedTvShow && (
-          <div style={{ marginTop: "20px", maxHeight: "300px", overflowY: "auto", width: "95%", backgroundColor: "rgba(26,26,26,0.8)", padding: "10px", borderRadius: "8px", color: "#fff" }}>
+          <div
+            style={{
+              marginTop: "20px",
+              maxHeight: "300px",
+              overflowY: "auto",
+              width: "95%",
+              backgroundColor: "rgba(26,26,26,0.8)",
+              padding: "10px",
+              borderRadius: "8px",
+              color: "#fff",
+            }}
+          >
             {Object.keys(tvShowsGrouped[selectedTvShow]).map((season) => (
               <div key={season}>
-                <div onClick={() => toggleSeason(season)} style={{ cursor: "pointer", padding: "6px", backgroundColor: "#444", marginTop: "5px", borderRadius: "4px" }}>
+                <div
+                  onClick={() => toggleSeason(season)}
+                  style={{ cursor: "pointer", padding: "6px", backgroundColor: "#444", marginTop: "5px", borderRadius: "4px" }}
+                >
                   {season}
                 </div>
                 {!seasonCollapse[season] &&
                   tvShowsGrouped[selectedTvShow][season].map((ep, idx) => (
-                    <div key={idx} onClick={() => setCurrentUrl(ep.url)} style={{ cursor: "pointer", padding: "6px", marginLeft: "10px", marginTop: "2px", borderRadius: "4px", color: "#fff", backgroundColor: currentUrl === ep.url ? "#555" : "#222" }}>
+                    <div
+                      key={idx}
+                      onClick={() => setCurrentUrl(ep.url)}
+                      style={{
+                        cursor: "pointer",
+                        padding: "6px",
+                        marginLeft: "10px",
+                        marginTop: "2px",
+                        borderRadius: "4px",
+                        color: "#fff",
+                        backgroundColor: currentUrl === ep.url ? "#555" : "#222",
+                      }}
+                    >
                       {ep.name}
                     </div>
                   ))}
@@ -314,7 +342,21 @@ export default function OlivePlayer() {
       </div>
 
       {/* Sidebar toggle */}
-      <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ position: "absolute", top: "20px", left: sidebarOpen ? "280px" : "20px", padding: "8px 12px", backgroundColor: "#333", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", zIndex: 1000 }}>
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: sidebarOpen ? "280px" : "20px",
+          padding: "8px 12px",
+          backgroundColor: "#333",
+          color: "#fff",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          zIndex: 1000,
+        }}
+      >
         {sidebarOpen ? "Hide Sidebar" : "☰ Show Sidebar"}
       </button>
     </div>
