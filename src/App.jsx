@@ -8,12 +8,7 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Movies M3U with embed links
-const MOVIES_M3U = `
-#EXTM3U
-#EXTINF:0,Smile (2022)
-https://player.autoembed.cc/embed/movie/882598
-`;
+const MOVIES_URL = "/movies_random.m3u"; // new M3U file in public folder
 
 const PLAYLISTS = {
   live: "https://iptv-org.github.io/iptv/index.m3u",
@@ -36,27 +31,8 @@ export default function OlivePlayer() {
 
   const [currentUrl, setCurrentUrl] = useState("");
 
-  // Parse hardcoded movies M3U manually
-  const parseMoviesM3U = (m3u) => {
-    const lines = m3u.split("\n").filter((l) => l.trim() !== "");
-    const movieList = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("#EXTINF:")) {
-        const name = lines[i].split(",")[1] || "Unknown";
-        const url = lines[i + 1] || "";
-        if (url)
-          movieList.push({
-            name,
-            url,
-            type: url.includes("embed") ? "iframe" : "video/mp4",
-          });
-      }
-    }
-    return movieList;
-  };
-
+  // Load Live TV
   useEffect(() => {
-    // Load Live TV
     fetch(PLAYLISTS.live)
       .then((res) => res.text())
       .then((text) => {
@@ -66,20 +42,36 @@ export default function OlivePlayer() {
           .map((ch) => ({
             name: ch.name || "Unknown",
             url: ch.url,
-            type: ch.url.endsWith(".m3u8")
-              ? "application/x-mpegURL"
-              : "video/mp4",
+            type: ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
           }));
         setLiveChannels(live);
         if (live.length) setCurrentUrl(live[0].url);
       })
       .catch(() => console.warn("Failed to load live channels"));
+  }, []);
 
-    // Load Movies
-    const movieList = parseMoviesM3U(MOVIES_M3U);
-    setMovies(movieList);
+  // Load Movies from M3U
+  useEffect(() => {
+    fetch(MOVIES_URL)
+      .then((res) => res.text())
+      .then((text) => {
+        const lines = text.split("\n").filter((l) => l.trim() !== "");
+        const movieList = [];
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].startsWith("#EXTINF:")) {
+            const name = lines[i].split(",")[1] || "Unknown";
+            const url = lines[i + 1] || "";
+            if (url) movieList.push({ name, url, type: url.includes("embed") ? "iframe" : "video/mp4" });
+          }
+        }
+        setMovies(movieList);
+        if (movieList.length) setCurrentUrl(movieList[0].url);
+      })
+      .catch((err) => console.error("Failed to load movies:", err));
+  }, []);
 
-    // Load TV Shows
+  // Load TV Shows
+  useEffect(() => {
     fetch(PLAYLISTS.tvshows)
       .then((res) => res.text())
       .then((text) => {
@@ -94,9 +86,7 @@ export default function OlivePlayer() {
             grouped[showName][season].push({
               name: ch.name,
               url: ch.url,
-              type: ch.url.endsWith(".m3u8")
-                ? "application/x-mpegURL"
-                : "video/mp4",
+              type: ch.url.endsWith(".m3u8") ? "application/x-mpegURL" : "video/mp4",
             });
           });
         setTvShowsGrouped(grouped);
@@ -107,10 +97,7 @@ export default function OlivePlayer() {
   // Initialize Video.js only for non-Movies sections
   useEffect(() => {
     if (!playerInstance.current && playerRef.current && section !== "movies") {
-      playerInstance.current = videojs(playerRef.current, {
-        controls: true,
-        fluid: true,
-      });
+      playerInstance.current = videojs(playerRef.current, { controls: true, fluid: true });
     }
   }, [section]);
 
@@ -125,9 +112,8 @@ export default function OlivePlayer() {
 
   const handleSectionChange = (newSection) => {
     setSection(newSection);
-    if (newSection === "live" && liveChannels.length)
-      setCurrentUrl(liveChannels[0].url);
-    if (newSection === "movies") setCurrentUrl(""); // reset until user clicks
+    if (newSection === "live" && liveChannels.length) setCurrentUrl(liveChannels[0].url);
+    if (newSection === "movies" && movies.length) setCurrentUrl(movies[0].url);
     if (newSection === "tvshows" && Object.keys(tvShowsGrouped).length) {
       const firstShow = Object.keys(tvShowsGrouped)[0];
       setSelectedTvShow(firstShow);
@@ -135,9 +121,7 @@ export default function OlivePlayer() {
       setCurrentUrl(tvShowsGrouped[firstShow][firstSeason][0].url);
 
       const collapseStates = {};
-      Object.keys(tvShowsGrouped[firstShow]).forEach(
-        (season) => (collapseStates[season] = true)
-      );
+      Object.keys(tvShowsGrouped[firstShow]).forEach((season) => (collapseStates[season] = true));
       setSeasonCollapse(collapseStates);
     }
   };
@@ -178,21 +162,9 @@ export default function OlivePlayer() {
             <img
               src={OLIVE_LOGO}
               alt="Olive Logo"
-              style={{
-                width: "120px",
-                height: "120px",
-                borderRadius: "50%",
-                marginBottom: "10px",
-              }}
+              style={{ width: "120px", height: "120px", borderRadius: "50%", marginBottom: "10px" }}
             />
-            <h1
-              style={{
-                color: "#fff",
-                fontFamily: "'Brush Script MT', cursive",
-                fontSize: "32px",
-                marginBottom: "20px",
-              }}
-            >
+            <h1 style={{ color: "#fff", fontFamily: "'Brush Script MT', cursive", fontSize: "32px", marginBottom: "20px" }}>
               OlivePlayer
             </h1>
 
@@ -206,8 +178,7 @@ export default function OlivePlayer() {
                     padding: "10px",
                     marginBottom: "10px",
                     borderRadius: "6px",
-                    backgroundColor:
-                      currentUrl === ch.url ? "#555" : "#333",
+                    backgroundColor: currentUrl === ch.url ? "#555" : "#333",
                     width: "100%",
                   }}
                 >
@@ -225,8 +196,7 @@ export default function OlivePlayer() {
                     padding: "10px",
                     marginBottom: "10px",
                     borderRadius: "6px",
-                    backgroundColor:
-                      currentUrl === mv.url ? "#555" : "#333",
+                    backgroundColor: currentUrl === mv.url ? "#555" : "#333",
                     width: "100%",
                   }}
                 >
@@ -240,16 +210,10 @@ export default function OlivePlayer() {
                   key={idx}
                   onClick={() => {
                     setSelectedTvShow(show);
-                    const firstSeason = Object.keys(
-                      tvShowsGrouped[show]
-                    )[0];
-                    setCurrentUrl(
-                      tvShowsGrouped[show][firstSeason][0].url
-                    );
+                    const firstSeason = Object.keys(tvShowsGrouped[show])[0];
+                    setCurrentUrl(tvShowsGrouped[show][firstSeason][0].url);
                     const collapseStates = {};
-                    Object.keys(tvShowsGrouped[show]).forEach(
-                      (season) => (collapseStates[season] = true)
-                    );
+                    Object.keys(tvShowsGrouped[show]).forEach((season) => (collapseStates[season] = true));
                     setSeasonCollapse(collapseStates);
                   }}
                   style={{
@@ -258,8 +222,7 @@ export default function OlivePlayer() {
                     marginBottom: "10px",
                     borderRadius: "6px",
                     width: "100%",
-                    backgroundColor:
-                      selectedTvShow === show ? "#555" : "#333",
+                    backgroundColor: selectedTvShow === show ? "#555" : "#333",
                   }}
                 >
                   {show}
@@ -270,15 +233,7 @@ export default function OlivePlayer() {
       </div>
 
       {/* Main content */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingTop: "20px",
-        }}
-      >
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px" }}>
         <div style={{ marginBottom: "20px" }}>
           <button
             onClick={() => handleSectionChange("live")}
@@ -326,48 +281,21 @@ export default function OlivePlayer() {
 
         {/* Video player or iframe */}
         {section === "movies" ? (
-          currentUrl ? (
-            <iframe
-              src={currentUrl}
-              title="Movie Player"
-              width="95%"
-              height="700"
-              style={{
-                border: "none",
-                borderRadius: "8px",
-                backgroundColor: "#000",
-              }}
-              allowFullScreen
-            ></iframe>
-          ) : (
-            <div
-              style={{
-                width: "95%",
-                height: "700px",
-                borderRadius: "8px",
-                backgroundColor: "#000",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-              }}
-            >
-              🎬 Select a movie from the sidebar to start watching
-            </div>
-          )
+          <iframe
+            src={currentUrl}
+            title="Movie Player"
+            width="95%"
+            height="700"
+            style={{ border: "none", borderRadius: "8px", backgroundColor: "#000" }}
+            allowFullScreen
+          ></iframe>
         ) : (
           <video
             ref={playerRef}
             className="video-js vjs-big-play-centered"
             controls
             playsInline
-            style={{
-              width: "95%",
-              maxWidth: "1400px",
-              height: "700px",
-              backgroundColor: "#000",
-            }}
+            style={{ width: "95%", maxWidth: "1400px", height: "700px", backgroundColor: "#000" }}
           />
         )}
 
@@ -410,8 +338,7 @@ export default function OlivePlayer() {
                         marginTop: "2px",
                         borderRadius: "4px",
                         color: "#fff",
-                        backgroundColor:
-                          currentUrl === ep.url ? "#555" : "#222",
+                        backgroundColor: currentUrl === ep.url ? "#555" : "#222",
                       }}
                     >
                       {ep.name}
