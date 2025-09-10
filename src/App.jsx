@@ -8,7 +8,7 @@ const OLIVE_LOGO =
 
 const BACKGROUND_GIF = "https://wallpaperaccess.com/full/869923.gif";
 
-// Updated Movies M3U (Hydra/HyHD embeds)
+// Hydra Movies M3U
 const MOVIES_M3U = `
 #EXTM3U
 #EXTINF:0,195388-watch-metallica-live-shit-binge-amp-purge-seattle-1993-online
@@ -62,7 +62,7 @@ export default function OlivePlayer() {
       if (lines[i].startsWith("#EXTINF:")) {
         const name = lines[i].split(",")[1] || "Unknown";
         const url = lines[i + 1] || "";
-        if (url) movieList.push({ name, url, type: url.includes("embed") ? "iframe" : "video/mp4" });
+        if (url) movieList.push({ name, url });
       }
     }
     return movieList;
@@ -101,7 +101,7 @@ export default function OlivePlayer() {
             const showName = ch.name.split(" S")[0];
             const season = ch.name.match(/S\d+/)?.[0] || "S01";
             if (!grouped[showName]) grouped[showName] = {};
-            if (!grouped[showName][season]) grouped[season] = [];
+            if (!grouped[showName][season]) grouped[showName][season] = [];
             grouped[showName][season].push({
               name: ch.name,
               url: ch.url,
@@ -266,16 +266,17 @@ export default function OlivePlayer() {
         </div>
 
         {/* Video player or iframe */}
-        {section === "movies" && movies.length > 0 ? (
-          <iframe
-            key={currentUrl} // reload iframe on URL change
-            src={currentUrl}
-            title="Movie Player"
-            width="95%"
-            height="700"
-            style={{ border: "none", borderRadius: "8px", backgroundColor: "#000" }}
-            allowFullScreen
-          ></iframe>
+        {section === "movies" && currentUrl ? (
+          <div style={{ width: "95%", maxWidth: "1400px", height: "700px" }}>
+            <iframe
+              src={currentUrl}
+              title="Movie Player"
+              width="100%"
+              height="100%"
+              style={{ border: "none", borderRadius: "8px", backgroundColor: "#000" }}
+              allowFullScreen
+            />
+          </div>
         ) : (
           <video
             ref={playerRef}
